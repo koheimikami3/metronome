@@ -1,0 +1,367 @@
+import SwiftUI
+import QuartzCore
+
+/// 画面間で共有する状態。UI からオーディオを触るのはこのクラスだけ。
+///
+/// `@Observable` なので、SwiftUI は**実際に読んだプロパティ**だけを購読する。
+/// 60 fps で変わる `step` を読んでいない画面は、拍が進んでも再評価されない。
+@MainActor
+@Observable
+final class MetronomeStore {
+
+    private let engine = MetronomeEngine()
+    private let defaults = UserDefaults.standard
+    private var displayLink: DisplayLink?
+
+    // MARK: - 永続化する設定
+
+    var bpm: Int = 112 {
+        didSet {
+            bpm = Tempo.clamped(bpm)
+            guard bpm != oldValue else { return }
+            syncEngine()
+            schedulePersist()
+        }
+    }
+
+    var numerator = 4 {
+        didSet {
+            guard numerator != oldValue else { return }
+            normalizeAccents()
+            syncEngine()
+            schedulePersist()
+        }
+    }
+
+    var denominator = 4 {
+        didSet {
+            guard denominator != oldValue else { return }
+            // 分子が新しい分母で選べないなら先頭に寄せる
+            if !TimeSignature.numerators(for: denominator).contains(numerator) {
+                numerator = TimeSignature.numerators(for: denominator).first ?? 4
+            }
+            subdivisionIndex = 0   // 分割の選択肢ごと変わるので先頭に戻す
+            normalizeAccents()
+            syncEngine()
+            schedulePersist()
+        }
+    }
+
+    var subdivisionIndex = 0 {
+        didSet {
+            subdivisionIndex = min(max(subdivisionIndex, 0), subdivisionOptions.count - 1)
+            guard subdivisionIndex != oldValue else { return }
+            syncEngine()
+            schedulePersist()
+        }
+    }
+
+    var accents: [AccentLevel] = [.strong, .weak, .weak, .weak] {
+        didSet {
+            guard accents != oldValue else { return }
+            syncEngine()
+            schedulePersist()
+        }
+    }
+
+    var voice: Voice = .wood {
+        didSet {
+            guard voice != oldValue else { return }
+            syncEngine()
+            schedulePersist()
+        }
+    }
+
+    var themeKey: String = Theme.fallback.key {
+        didSet {
+            guard themeKey != oldValue else { return }
+            schedulePersist()
+        }
+    }
+
+    var volume: Double = 0.8 {
+        didSet {
+            guard volume != oldValue else { return }
+            engine.setVolume(Float(volume))
+            schedulePersist()
+        }
+    }
+
+    /// 強拍に鈴を重ねる。切り替える UI は無く、常にオン(要件どおり)。
+    /// 設定を足すときのために状態としては持っておく。
+    var bellOnDownbeat = true {
+        didSet {
+            guard bellOnDownbeat != oldValue else { return }
+            syncEngine()
+            schedulePersist()
+        }
+    }
+
+    // MARK: - 再生状態(永続化しない)
+
+    private(set) var isRunning = false {
+        didSet {
+            // 練習中に画面が消えないように。再生中だけ立てる。
+            UIApplication.shared.isIdleTimerDisabled = isRunning
+        }
+    }
+
+    /// いま鳴っている拍(0 始まり)。停止中は -1。
+    private(set) var step = -1
+
+    /// いま鳴っている拍が**耳に届いた**時刻(`CACurrentMediaTime()` 基準)。
+    /// 振り子はこの時刻からの経過で角度を決める。
+    private(set) var currentBeatStartedAt: TimeInterval?
+
+    /// 広告を消す課金。初版では常に false(StoreKit に繋ぐときの差し込み口)。
+    let isPro = false
+
+    /// エンジンから受け取った「これから鳴る拍」。発音時刻を過ぎたものから消化する。
+    private var pendingBeats: [(beat: Int, audibleAt: TimeInterval)] = []
+
+    // MARK: - 組み立て
+
+    init() {
+        load()
+        engine.setHandlers(
+            onBeat: { [weak self] beat, audibleAt in
+                self?.pendingBeats.append((beat, audibleAt))
+            },
+            onStop: { [weak self] in
+                self?.handleEngineStopped()
+            }
+        )
+        engine.setVolume(Float(volume))
+        syncEngine()
+    }
+
+    // MARK: - 導出値
+
+    var theme: Theme { Theme.named(themeKey) }
+
+    /// 複合拍子なら 3(3 つずつで 1 拍)、そうでなければ 1
+    var group: Int { TimeSignature.group(numerator: numerator, denominator: denominator) }
+
+    var beatCount: Int { max(1, numerator / group) }
+
+    var subdivisionOptions: [Subdivision] {
+        Subdivision.options(denominator: denominator, group: group)
+    }
+
+    var subdivision: Subdivision {
+        subdivisionOptions[min(subdivisionIndex, subdivisionOptions.count - 1)]
+    }
+
+    var signatureLabel: String { "\(numerator)/\(denominator)" }
+
+    var tempoTerm: String { Tempo.term(bpm) }
+
+    /// 1 拍の長さ(秒)。振り子の周期に使う。
+    var beatDuration: TimeInterval { 60.0 / Double(bpm) }
+
+    var numeratorCaption: String {
+        switch denominator {
+        case 4: "1小節の拍数"
+        case 8: "1小節の8分音符数"
+        default: "1小節の16分音符数"
+        }
+    }
+
+    var beatCaption: String {
+        "\(beatCount) 拍 / 小節" + (group == 3 ? "(複合拍子・3つずつ)" : "")
+    }
+
+    // MARK: - 操作
+
+    func toggle() {
+        isRunning ? stop() : start()
+    }
+
+    private func start() {
+        pendingBeats.removeAll()
+        step = -1
+        currentBeatStartedAt = nil
+        isRunning = true
+        engine.start()
+        startDisplayLink()
+    }
+
+    private func stop() {
+        engine.stop()
+        handleEngineStopped()
+    }
+
+    /// エンジン側が止まったとき(ユーザー操作・割り込み)の後始末
+    private func handleEngineStopped() {
+        displayLink?.stop()
+        displayLink = nil
+        pendingBeats.removeAll()
+        isRunning = false
+        step = -1
+        currentBeatStartedAt = nil
+    }
+
+    func nudgeBpm(_ delta: Int) {
+        bpm += delta
+        Haptics.soft()
+    }
+
+    func cycleAccent(at index: Int) {
+        guard accents.indices.contains(index) else { return }
+        accents[index] = accents[index].next
+        if accents[index] != .rest {
+            engine.preview(voice, level: accents[index] == .strong ? .strong : .weak)
+        }
+        Haptics.light()
+    }
+
+    func resetAccents() {
+        accents = (0..<beatCount).map { $0 == 0 ? .strong : .weak }
+        Haptics.soft()
+    }
+
+    /// タップテンポ。直近 2.4 秒より古いタップは捨てて平均間隔を取る。
+    private var taps: [TimeInterval] = []
+
+    func tap() {
+        let now = CACurrentMediaTime()
+        taps = taps.filter { now - $0 < 2.4 }
+        taps.append(now)
+        if taps.count > 1 {
+            let interval = (now - taps[0]) / Double(taps.count - 1)
+            bpm = Tempo.clamped(Int((60 / interval).rounded()))
+        }
+        engine.preview(voice)
+        Haptics.light()
+    }
+
+    func selectVoice(_ newVoice: Voice) {
+        voice = newVoice
+        engine.preview(newVoice, level: .strong)
+        Haptics.soft()
+    }
+
+    func selectTheme(_ key: String) {
+        themeKey = key
+        Haptics.soft()
+    }
+
+    // MARK: - 拍の消化
+
+    private func startDisplayLink() {
+        let link = DisplayLink { [weak self] in self?.advanceBeat() }
+        link.start()
+        displayLink = link
+    }
+
+    /// 発音時刻を過ぎた拍を UI に反映する。**音より先に光らせない**。
+    private func advanceBeat() {
+        let now = CACurrentMediaTime()
+        var latest: (beat: Int, audibleAt: TimeInterval)?
+        while let first = pendingBeats.first, first.audibleAt <= now {
+            pendingBeats.removeFirst()
+            latest = first
+        }
+        guard let latest else { return }
+        // 拍数が減った直後は、古い拍番号が残っていることがある
+        step = min(latest.beat, beatCount - 1)
+        currentBeatStartedAt = latest.audibleAt
+    }
+
+    // MARK: - エンジンへの反映
+
+    private func normalizeAccents() {
+        var next = accents
+        while next.count < beatCount { next.append(.weak) }
+        accents = Array(next.prefix(beatCount))
+    }
+
+    private func syncEngine() {
+        engine.update(
+            MetronomeEngine.Settings(
+                bpm: Double(bpm),
+                beatCount: beatCount,
+                pulsesPerBeat: subdivision.pulses,
+                voice: voice,
+                accents: accents,
+                bellOnDownbeat: bellOnDownbeat
+            )
+        )
+    }
+
+    // MARK: - 永続化
+
+    private enum Key {
+        static let bpm = "bpm"
+        static let numerator = "numerator"
+        static let denominator = "denominator"
+        static let subdivisionIndex = "subdivisionIndex"
+        static let accents = "accents"
+        static let voice = "voice"
+        static let theme = "theme"
+        static let volume = "volume"
+        static let bellOnDownbeat = "bellOnDownbeat"
+    }
+
+    private var persistTask: Task<Void, Never>?
+
+    /// スライダーのドラッグ中は 1 秒に何十回も値が変わるので、書き込みは間引く。
+    private func schedulePersist() {
+        persistTask?.cancel()
+        persistTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            self?.persist()
+        }
+    }
+
+    private func persist() {
+        defaults.set(bpm, forKey: Key.bpm)
+        defaults.set(numerator, forKey: Key.numerator)
+        defaults.set(denominator, forKey: Key.denominator)
+        defaults.set(subdivisionIndex, forKey: Key.subdivisionIndex)
+        defaults.set(accents.map(\.rawValue), forKey: Key.accents)
+        defaults.set(voice.rawValue, forKey: Key.voice)
+        defaults.set(themeKey, forKey: Key.theme)
+        defaults.set(volume, forKey: Key.volume)
+        defaults.set(bellOnDownbeat, forKey: Key.bellOnDownbeat)
+    }
+
+    /// 保存値の読み戻し。`didSet` を通さずに入れたいので、検証してから直接代入する。
+    private func load() {
+        if let stored = defaults.object(forKey: Key.bpm) as? Int {
+            bpm = Tempo.clamped(stored)
+        }
+        if let stored = defaults.object(forKey: Key.denominator) as? Int,
+           TimeSignature.denominators.contains(stored) {
+            denominator = stored
+        }
+        if let stored = defaults.object(forKey: Key.numerator) as? Int,
+           TimeSignature.numerators(for: denominator).contains(stored) {
+            numerator = stored
+        }
+        if let stored = defaults.object(forKey: Key.subdivisionIndex) as? Int {
+            subdivisionIndex = min(max(stored, 0), subdivisionOptions.count - 1)
+        }
+        if let stored = defaults.array(forKey: Key.accents) as? [Int] {
+            let restored = stored.compactMap(AccentLevel.init(rawValue:))
+            // 拍数と食い違っていたら捨てる(拍子だけ先に書き換わった場合など)
+            if restored.count == beatCount { accents = restored }
+        }
+        if let stored = defaults.string(forKey: Key.voice), let restored = Voice(rawValue: stored) {
+            voice = restored
+        }
+        if let stored = defaults.string(forKey: Key.theme), Theme.all.contains(where: { $0.key == stored }) {
+            themeKey = stored
+        } else {
+            themeKey = "caramel"   // 初回起動の既定(デザインの標準色)
+        }
+        if let stored = defaults.object(forKey: Key.volume) as? Double {
+            volume = min(max(stored, 0), 1)
+        }
+        if defaults.object(forKey: Key.bellOnDownbeat) != nil {
+            bellOnDownbeat = defaults.bool(forKey: Key.bellOnDownbeat)
+        }
+        normalizeAccents()
+    }
+}
