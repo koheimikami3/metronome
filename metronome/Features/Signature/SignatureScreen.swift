@@ -6,17 +6,23 @@ struct SignatureScreen: View {
 
     private var theme: Theme { store.theme }
 
+    /// カードの合計は 591pt。**iPhone SE(第3世代)ではバナーの領域を引くと
+    /// 540pt しか無く、50pt ほど入り切らない**ので ScrollView に入れてある。
+    /// 収まる画面では動かないので、見た目も操作も静的なときと変わらない
+    /// (縮めて全機種で収める案もあるが、余裕のある機種まで詰まって見える)。
     var body: some View {
-        VStack(spacing: 14) {
-            header
-            numeratorCard
-            denominatorCard
-            accentCard
-            subdivisionCard
-            Spacer(minLength: 0)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 14) {
+                header
+                numeratorCard
+                denominatorCard
+                accentCard
+                subdivisionCard
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
     }
 
     private var header: some View {

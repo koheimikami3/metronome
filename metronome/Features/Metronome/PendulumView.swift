@@ -18,8 +18,9 @@ struct PendulumView: View {
     var body: some View {
         GeometryReader { geo in
             // 棒は与えられた高さいっぱいに伸ばす。SE のような短い画面では
-            // 自然に縮み、下のボタンを押し出さない。
-            let length = max(140, geo.size.height)
+            // 自然に縮み、下のボタンを押し出さない。下限は枠の下限と揃える
+            // (ここだけ大きいと枠からはみ出してヘッダーに重なる)。
+            let length = max(100, geo.size.height)
             Group {
                 if store.isRunning, let beatStartedAt = store.currentBeatStartedAt {
                     // 毎フレーム呼び直されるので、角度は現在時刻から素直に計算できる
@@ -33,7 +34,10 @@ struct PendulumView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
-        .frame(minHeight: 150, maxHeight: 260)
+        // この画面で伸び縮みするのはここだけ(他は合計 419pt の固定高)なので、
+        // **バナーの領域はここが吸う**。実測: iPhone 17 Pro 252pt /
+        // iPhone SE(第3世代)121pt。下限 100 はその下を通らないための保険。
+        .frame(minHeight: 100, maxHeight: 260)
         .accessibilityHidden(true)
     }
 
