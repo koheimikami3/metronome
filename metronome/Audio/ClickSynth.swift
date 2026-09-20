@@ -66,7 +66,7 @@ nonisolated enum ClickSynth {
         case .click:   (0.02, 0.04, 0.05)
         case .claves:  (0.035, 0.06, 0.08)
         case .tick:    (0.02, 0.035, 0.35)
-        case .mech:    (0.025, 0.045, 0.06)
+        case .mech:    (0.03, 0.06, 0.08)
         case .bell:    (0.08, 0.30, 0.50)
         case .beep:    (0.04, 0.09, 0.12)
         case .digital: (0.035, 0.07, 0.10)
@@ -120,7 +120,9 @@ nonisolated enum ClickSynth {
     private static func drive(_ voice: Voice) -> Float {
         switch voice {
         // ノイズ系は折り返しが起きないので強く掛けられる
-        case .tick, .mech, .hat: 3.0
+        case .tick, .hat: 3.0
+        // mech は倍音が増えるとそのまま「甲高さ」になるので控えめに
+        case .mech: 2.7
         case .wood: 2.5
         // 倍音で作っている波形は、掛けすぎると帯域制限した意味が無くなる
         case .click: 2.0
@@ -205,13 +207,19 @@ nonisolated enum ClickSynth {
                  dur: d, gain: 1.0, wave: .triangle, sweep: 0.15)
 
         case .mech:
-            // 機械式メトロノームの「コッ」。撃ち出しの打撃音 + 木の胴鳴りで作る。
-            // tick(メトロ1)が電子的な刻みなのに対し、こちらは実物に寄せたもの。
-            noise(&out, sr: sr, at: 0, dur: d * 0.3, cutoff: 1800, gain: 1.0)
-            tone(&out, sr: sr, at: 0, f0: accent ? 2100 : 1750, f1: accent ? 1150 : 980,
-                 dur: d, gain: 0.9, wave: .triangle)
-            tone(&out, sr: sr, at: 0, f0: accent ? 780 : 660, f1: nil,
-                 dur: d * 0.7, gain: 0.5, wave: .sine)
+            // 実物の機械式メトロノームの「カチ」。中身は 2 段になっている。
+            //   1. 撃鉄がプレートに当たる数 ms の接触音(広い帯域)
+            //   2. そのあと木の箱が短く鳴る胴鳴り
+            // 箱の共鳴は整数倍にならないので、**比の合わない高さのサインを重ねる**。
+            // 倍音を積むと箱ではなく楽器の音になる。
+            noise(&out, sr: sr, at: 0, dur: d * 0.07, cutoff: accent ? 4200 : 3600, gain: 1.0)
+            noise(&out, sr: sr, at: 0, dur: d * 0.4, cutoff: 1400, gain: 0.5)
+            tone(&out, sr: sr, at: 0, f0: accent ? 1380 : 1150, f1: nil,
+                 dur: d * 0.75, gain: 0.5, wave: .sine)
+            tone(&out, sr: sr, at: 0, f0: accent ? 2260 : 1880, f1: nil,
+                 dur: d * 0.4, gain: 0.3, wave: .sine)
+            tone(&out, sr: sr, at: 0, f0: accent ? 700 : 590, f1: nil,
+                 dur: d, gain: 0.4, wave: .sine)
 
         case .tick:
             // 機械式メトロノームそのままに、アクセントは「カチ + 鈴」。
