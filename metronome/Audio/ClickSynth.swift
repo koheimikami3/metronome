@@ -63,7 +63,7 @@ nonisolated enum ClickSynth {
     private static func durations(_ voice: Voice) -> (soft: Double, weak: Double, accent: Double) {
         switch voice {
         case .wood:    (0.04, 0.08, 0.10)
-        case .click:   (0.02, 0.04, 0.05)
+        case .click:   (0.024, 0.048, 0.06)
         case .claves:  (0.035, 0.06, 0.08)
         case .tick:    (0.02, 0.035, 0.35)
         case .mech:    (0.03, 0.06, 0.08)
@@ -121,11 +121,13 @@ nonisolated enum ClickSynth {
         switch voice {
         // ノイズ系は折り返しが起きないので強く掛けられる
         case .tick, .hat: 3.0
-        // mech は倍音が増えるとそのまま「甲高さ」になるので控えめに
+        // mech と wood は倍音が増えるとそのまま「甲高さ」になるので控えめに
         case .mech: 2.7
-        case .wood: 2.5
-        // 倍音で作っている波形は、掛けすぎると帯域制限した意味が無くなる
-        case .click: 2.0
+        case .wood: 2.0
+        // 倍音で作っている波形は、掛けすぎると帯域制限した意味が無くなる。
+        // click はさらに控えめ。tanh は頭を潰す = アタックを削るので、
+        // 立ちを聴かせたい音では掛けすぎると鈍くなる。
+        case .click: 1.6
         case .rim, .cow: 1.5
         case .claves: 1.6
         case .digital: 1.2
@@ -192,19 +194,25 @@ nonisolated enum ClickSynth {
 
         switch voice {
         case .wood:
-            tone(&out, sr: sr, at: 0, f0: accent ? 1500 : 1100, f1: accent ? 1120 : 820,
+            // 実物のウッドブロックの胴は 800〜1200 Hz あたり。ここを上に取ると
+            // 木ではなく金属の「カン」に寄って甲高く聞こえる。
+            tone(&out, sr: sr, at: 0, f0: accent ? 1000 : 780, f1: accent ? 760 : 590,
                  dur: d, gain: 1.0, wave: .triangle, sweep: 0.25)
-            noise(&out, sr: sr, at: 0, dur: d * 0.36, cutoff: accent ? 3000 : 3200,
-                  gain: accent ? 0.7 : 0.4)
+            // ノイズはハイパスなので、cutoff は「どれだけ高いところが残るか」。
+            // 3 kHz より上だけ残すと、撥が当たる音ではなく砂のような高域になる。
+            noise(&out, sr: sr, at: 0, dur: d * 0.36, cutoff: accent ? 1600 : 1700,
+                  gain: accent ? 0.6 : 0.35)
 
         case .click:
             // 矩形波はやめた。帯域を絞っても中身は奇数倍音だけなので、数十 ms 伸ばすと
             // 「カチ」ではなく空洞のあるブザーに聞こえる。実物のクリックに近い
             // 「ごく短い打撃 + すぐ落ちる胴」で組み直している。
-            noise(&out, sr: sr, at: 0, dur: d * 0.07, cutoff: accent ? 5500 : 4500,
-                  gain: accent ? 0.45 : 0.4)
+            // 頭を立てるために動かすのは**打撃と胴の比**。打撃だけ上げても、
+            // 正規化で全体が一緒に下がるので比は変わらない。打撃を主(1.0)にして
+            // 胴を下げ、そのぶん減衰も短くしている。
+            noise(&out, sr: sr, at: 0, dur: d * 0.06, cutoff: accent ? 6000 : 5000, gain: 1.0)
             tone(&out, sr: sr, at: 0, f0: accent ? 1650 : 1150, f1: accent ? 1350 : 950,
-                 dur: d, gain: 1.0, wave: .triangle, sweep: 0.15)
+                 dur: d, gain: 0.85, wave: .triangle, sweep: 0.15)
 
         case .mech:
             // 実物の機械式メトロノームの「カチ」。中身は 2 段になっている。
@@ -249,10 +257,14 @@ nonisolated enum ClickSynth {
                  dur: d * 0.8, gain: 0.5, wave: .sine)
 
         case .rim:
-            tone(&out, sr: sr, at: 0, f0: accent ? 620 : 430, f1: 300, dur: d, gain: 1.0, wave: .square)
+            // アクセントだけ頭を 5 ms ほどかけて立ち上げる。矩形波を頭から出すと、
+            // 縁を叩いた音というより弾かれたように硬く聞こえる。
+            tone(&out, sr: sr, at: 0, f0: accent ? 620 : 430, f1: 300, dur: d, gain: 1.0,
+                 wave: .square, attack: accent ? 0.02 : 0)
             // アクセントは胴が鳴っている感じを足す
             if accent {
-                tone(&out, sr: sr, at: 0, f0: 180, f1: nil, dur: d * 0.8, gain: 0.5, wave: .sine)
+                tone(&out, sr: sr, at: 0, f0: 180, f1: nil, dur: d * 0.8, gain: 0.5,
+                     wave: .sine, attack: 0.025)
             }
 
         case .cow:
@@ -291,9 +303,12 @@ nonisolated enum ClickSynth {
     /// `sweep` は f0 → f1 を**音の頭の何割で渡りきるか**。1 で最後まで引っ張る。
     /// 打楽器の音程の落ちは実際にはごく短いので、1 のままだと打撃音ではなく
     /// 「音程が滑っている」ように聞こえる。
+    ///
+    /// `attack` は**音の頭の何割をかけて音量を立ち上げるか**。0 なら即座に最大
+    /// (打撃音はふつうこちら)。数 ms 入れるとアタックの角が取れて柔らかくなる。
     private static func tone(_ out: inout [Float], sr: Double, at start: Double,
                              f0: Double, f1: Double?, dur: Double, gain: Float, wave: Wave,
-                             sweep: Double = 1) {
+                             sweep: Double = 1, attack: Double = 0) {
         let startIndex = Int(start * sr)
         let count = Int(dur * sr)
         guard count > 0 else { return }
@@ -309,7 +324,10 @@ nonisolated enum ClickSynth {
             phase += 2 * Double.pi * frequency / sr
             let sample = waveform(wave, phase: phase, frequency: frequency)
             let envelope = pow(endGain / Double(gain), t)
-            out[index] += Float(sample * envelope) * gain
+            // 立ち上がりはレイズドコサイン。直線で上げると折れ点が角として残り、
+            // 結局「カチッ」と聞こえて柔らかくならない。
+            let onset = attack > 0 ? (1 - cos(.pi * min(t / attack, 1))) / 2 : 1
+            out[index] += Float(sample * envelope * onset) * gain
         }
     }
 
