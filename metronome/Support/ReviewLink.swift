@@ -8,9 +8,10 @@ import Foundation
 /// この URL なら必ず App Store が開く。
 enum ReviewLink {
 
-    /// App Store Connect でアプリを登録するまで確定しない。
-    /// **空のあいだはレビュー導線そのものを出さない**(押せて何も起きない行を作らない)。
-    static let appID = ""
+    /// App Store Connect の Apple ID(アプリ登録時に採番される 10 桁)。
+    /// **空のあいだはレビュー導線そのものを出さない**(押せて何も起きない行を作らない)ので、
+    /// アプリを作り直して ID が変わったときはここだけ直せばよい。
+    static let appID = "6814060706"
 
     static var writeReviewURL: URL? {
         guard !appID.isEmpty else { return nil }
