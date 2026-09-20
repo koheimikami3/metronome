@@ -19,7 +19,6 @@ struct MetronomeScreen: View {
                 tapButton
                 playButton
             }
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.top, 10)

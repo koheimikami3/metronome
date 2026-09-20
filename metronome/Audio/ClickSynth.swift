@@ -18,11 +18,13 @@ nonisolated enum ClickSynth {
     enum Level: String, CaseIterable {
         case strong, weak, soft
 
+        /// 上限は**小節頭**で決まる。そこだけはクリック(strong)と鈴が重なるので、
+        /// `strong + 鈴のピーク 0.30` が 1.0 を超えると歪む。0.68 はその手前。
         var gain: Float {
             switch self {
-            case .strong: 0.48
-            case .weak: 0.26
-            case .soft: 0.10
+            case .strong: 0.68
+            case .weak: 0.38
+            case .soft: 0.15
             }
         }
 

@@ -21,7 +21,7 @@ final class MetronomeStore {
     // 自分自身に代入すると didSet が呼び直されて無限再帰する**(素の Swift では
     // 起きない)。丸めが要るものは private(set) + セッターにしてある。
 
-    private(set) var bpm = 112
+    private(set) var bpm = 120
 
     func setBpm(_ value: Int) {
         let clamped = Tempo.clamped(value)
@@ -89,7 +89,7 @@ final class MetronomeStore {
 
     /// スライダーが 0...1 の範囲しか渡さないので丸めは要らない。
     /// もし範囲外を入れる経路を足すなら、bpm と同じくセッターにすること。
-    var volume: Double = 0.8 {
+    var volume: Double = 1.0 {
         didSet {
             guard volume != oldValue else { return }
             engine.setVolume(Float(volume))
@@ -119,6 +119,11 @@ final class MetronomeStore {
     /// いま鳴っている拍(0 始まり)。停止中は -1。
     private(set) var step = -1
 
+    /// 再生を始めてから数えた拍の通し番号。振り子の振れる向きに使う。
+    /// 小節内の `step` で数えると、3 拍子のような奇数拍で小節をまたぐたび
+    /// 向きが揃ってしまう。
+    private(set) var beatsSinceStart = 0
+
     /// いま鳴っている拍が**耳に届いた**時刻(`CACurrentMediaTime()` 基準)。
     /// 振り子はこの時刻からの経過で角度を決める。
     private(set) var currentBeatStartedAt: TimeInterval?
@@ -128,7 +133,7 @@ final class MetronomeStore {
     /// 振り子の位相をいまの BPM から出すと、再生中にテンポを変えた瞬間に
     /// `経過 / 拍長` が飛んで棒がカクつく。エンジン側も予約済みの次の拍は
     /// 動かさない(新しいテンポは次の拍から効く)ので、**表示もそれに揃える**。
-    private(set) var currentBeatDuration: TimeInterval = 60.0 / 112.0
+    private(set) var currentBeatDuration: TimeInterval = 60.0 / 120.0
 
     /// エンジンから受け取った「これから鳴る拍」。発音時刻を過ぎたものから消化する。
     private var pendingBeats: [(beat: Int, audibleAt: TimeInterval)] = []
@@ -201,6 +206,7 @@ final class MetronomeStore {
 
     private func start() {
         pendingBeats.removeAll()
+        beatsSinceStart = 0
         step = -1
         currentBeatStartedAt = nil
         isRunning = true
@@ -222,6 +228,7 @@ final class MetronomeStore {
         displayLink = nil
         pendingBeats.removeAll()
         isRunning = false
+        beatsSinceStart = 0
         step = -1
         currentBeatStartedAt = nil
     }
@@ -284,11 +291,16 @@ final class MetronomeStore {
     private func advanceBeat() {
         let now = CACurrentMediaTime()
         var latest: (beat: Int, audibleAt: TimeInterval)?
+        var consumed = 0
         while let first = pendingBeats.first, first.audibleAt <= now {
             pendingBeats.removeFirst()
             latest = first
+            consumed += 1
         }
         guard let latest else { return }
+        // 描画が間に合わず 2 つ以上たまっていても、飛ばした数だけ進める。
+        // 数を合わせないと振れる向きが裏返る。
+        beatsSinceStart += consumed
         // 拍数が減った直後は、古い拍番号が残っていることがある
         step = min(latest.beat, beatCount - 1)
         currentBeatStartedAt = latest.audibleAt
