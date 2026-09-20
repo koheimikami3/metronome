@@ -57,7 +57,9 @@ struct SettingsScreen: View {
         @Bindable var store = store
 
         return GlassCard(padding: 12) {
-            VStack(spacing: 12) {
+            // 余白は VStack の spacing ではなく各要素に付ける。音量の行だけ
+            // 上下を広く取りたいので、一律の spacing だと合わない。
+            VStack(spacing: 0) {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                     ForEach(Voice.allCases) { voice in
                         let isSelected = store.voice == voice
@@ -94,8 +96,10 @@ struct SettingsScreen: View {
                 // 音色のグリッドと地続きに見えないよう 1 本だけ仕切る。
                 // 罫線はカードの内側いっぱいに引く(SettingRow と違って
                 // 左にアイコンの列が無いため、字下げする理由が無い)。
-                Hairline(leading: 0)
+                Hairline(leading: 0).padding(.top, 14)
 
+                // 罫線からの 18 と、下の 6 + カードの内側余白 12 = 18 で
+                // 行を上下の真ん中に置く。詰めるとスライダーが窮屈に見える。
                 HStack(spacing: 14) {
                     Text("音量")
                         .font(.system(size: 15))
@@ -116,7 +120,8 @@ struct SettingsScreen: View {
                     )
                 }
                 .padding(.horizontal, 4)
-                .padding(.bottom, 2)
+                .padding(.top, 18)
+                .padding(.bottom, 6)
             }
         }
     }
