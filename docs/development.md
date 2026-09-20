@@ -228,7 +228,15 @@ iOS 26 は `.icon`、25 以前はアセットカタログ、と OS が選び分�
 `Metronome-AppIcon-1024.png` はアルファチャンネル付きで、そのままでは App Store Connect に
 弾かれる。**JPEG を経由する手は使わない** — このアイコンは平坦な色とくっきりした輪郭だけで
 できていて、JPEG がいちばん苦手な絵柄だから(輪郭にリンギングが出る)。
-白で塗った不透明なビットマップに描き直して PNG で書き出す:
+白で塗った不透明なビットマップに描き直して PNG で書き出す。
+
+同時に**絵を上へずらす**。素材は幾何学的な中央に置かれていて、ホーム画面では
+下に沈んで見えるため。**ずらす量は `AppIcon.icon/icon.json` の
+`translation-in-points` の y と必ず同じにする**(現在は 35 px = -35 pt)。
+片方だけ直すと iOS 26 と 25 以前で位置が食い違う。
+
+空いた下端は**最後の行をそのまま複製して**埋める。`CGColor(red:green:blue:)` で
+塗り足すと、それは sRGB ではなく汎用 RGB なので色がずれて帯になる。
 
 ```bash
 cat > /tmp/flatten.swift <<'SWIFT'
@@ -237,20 +245,44 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
+// flatten <入力 PNG> <出力 PNG> <上へずらす px>
 let inURL = URL(fileURLWithPath: CommandLine.arguments[1])
 let outURL = URL(fileURLWithPath: CommandLine.arguments[2])
+let shift = Int(CommandLine.arguments[3]) ?? 0
+
 guard let source = CGImageSourceCreateWithURL(inURL as CFURL, nil),
       let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { exit(1) }
 
 let w = image.width, h = image.height
-guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
-                          space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                          bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { exit(1) }
-ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
-ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+let bpr = w * 4
+var buf = [UInt8](repeating: 0, count: bpr * h)
+buf.withUnsafeMutableBytes { raw in
+    let ctx = CGContext(data: raw.baseAddress, width: w, height: h, bitsPerComponent: 8,
+                        bytesPerRow: bpr, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+    ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+    ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+    ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+}
 
-guard let flat = ctx.makeImage(),
+if shift > 0 {
+    for y in 0..<(h - shift) {
+        let from = (y + shift) * bpr, to = y * bpr
+        for i in 0..<bpr { buf[to + i] = buf[from + i] }
+    }
+    let lastGood = (h - shift - 1) * bpr
+    for y in (h - shift)..<h {
+        let to = y * bpr
+        for i in 0..<bpr { buf[to + i] = buf[lastGood + i] }
+    }
+}
+
+let flat: CGImage? = buf.withUnsafeMutableBytes { raw in
+    CGContext(data: raw.baseAddress, width: w, height: h, bitsPerComponent: 8,
+              bytesPerRow: bpr, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+              bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!.makeImage()
+}
+guard let flat,
       let dest = CGImageDestinationCreateWithURL(outURL as CFURL, UTType.png.identifier as CFString, 1, nil)
 else { exit(1) }
 CGImageDestinationAddImage(dest, flat, nil)
@@ -258,7 +290,7 @@ CGImageDestinationFinalize(dest)
 SWIFT
 
 swift /tmp/flatten.swift ~/Desktop/icon/export/Metronome-AppIcon-1024.png \
-  metronome/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
+  metronome/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png 35
 sips -g hasAlpha metronome/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png   # no を確認する
 ```
 
