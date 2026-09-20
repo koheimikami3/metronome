@@ -6,10 +6,11 @@ struct SignatureScreen: View {
 
     private var theme: Theme { store.theme }
 
-    /// カードの合計は 591pt。**iPhone SE(第3世代)ではバナーの領域を引くと
-    /// 540pt しか無く、50pt ほど入り切らない**ので ScrollView に入れてある。
-    /// 収まる画面では動かないので、見た目も操作も静的なときと変わらない
-    /// (縮めて全機種で収める案もあるが、余裕のある機種まで詰まって見える)。
+    /// カードの合計は 591pt。**バナーを載せると iPhone SE(第3世代)では
+    /// 540pt しか渡らず、50pt ほど入り切らない**ので ScrollView に入れてある。
+    /// 収まっている画面では `.scrollBounceBehavior(.basedOnSize)` で跳ねないので、
+    /// 静的な画面と区別が付かない(縮めて全機種で収める案もあるが、
+    /// 余裕のある機種まで詰まって見える)。
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
@@ -23,6 +24,9 @@ struct SignatureScreen: View {
             .padding(.top, 10)
             .padding(.bottom, 8)
         }
+        // 収まっている画面では跳ねさせない。既定だと中身が足りていても
+        // 引っぱるとスクロールするので、静的な画面との差が出てしまう。
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     private var header: some View {
