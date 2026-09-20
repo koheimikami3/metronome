@@ -2,7 +2,7 @@
 
 コードを読んでも分からず、戻すと事故が再発する判断だけを置く。
 機能仕様は [requirements.md](requirements.md)、UI(レイアウト・配色・寸法)は
-実装済みアプリとデザイントークン(`Metronome/DesignSystem/Theme.swift` / `Ink.swift`)が正。
+実装済みアプリとデザイントークン(`metronome/DesignSystem/Theme.swift` / `Ink.swift`)が正。
 
 ## 書き方(溜め込まないためのルール)
 
@@ -40,10 +40,14 @@
   `AVAudioEngineConfigurationChange` のいずれでもエンジンは止まる。通知を購読して
   張り直さないと、以後ずっと無音のまま操作を受け付ける見た目になる
 - 再生中だけ `isIdleTimerDisabled` を立てる。立てっぱなしにしない
+- **`UIBackgroundModes` は `metronome/Info.plist` に手で置く。** 対応する
+  `INFOPLIST_KEY_*` ビルド設定が存在しないため、自動生成の Info.plist だけでは入らない。
+  同期フォルダグループがこのファイルをリソースとしても複製しようとするので、
+  `project.pbxproj` の例外セットで除外してある(詳細は [development.md](development.md))
 
 ## 見た目
 
-- **ガラス表現の分岐は `DesignSystem/GlassStyle.swift` だけ。** iOS 26 以降は
+- **ガラス表現の分岐は `metronome/DesignSystem/GlassStyle.swift` だけ。** iOS 26 以降は
   `.glassEffect`、25 以前は Material + 手描きのリム。画面側は `.liquidGlass(role:)` で
   「形と役割」だけを渡し、`.background(...)` を直接書かない。見た目を変えるときは
   `LiquidGlass` と `LegacyGlass` の 2 か所だけを触る
@@ -56,7 +60,7 @@
 
 ## 広告・課金(初版では実装しない)
 
-- **差し込み口は `Monetization/AdSlot.swift` の 1 か所**に閉じる。初版は高さだけ確保した
+- **差し込み口は `metronome/Monetization/AdSlot.swift` の 1 か所**に閉じる。初版は高さだけ確保した
   透明な領域で、後から `GADBannerView` に差し替える。各タブの中身へ
   `.safeAreaInset(edge: .bottom)` で付ける
 - iOS 26 専用の `tabViewBottomAccessory` は使わない。バージョンで挙動が割れるのと、
@@ -73,7 +77,7 @@
   「レビューを書く」を押して何も起きないのは壊れて見える
 - **自動のレビュー依頼は初版では出さない。** 呼ぶに値する「達成の瞬間」がメトロノームには
   無い。起動 N 回目のような雑な契機で上限 3 回を消費したくないため、使われ方を見てから足す
-- App ID は App Store Connect への登録まで確定しない。`Support/ReviewLink.swift` の
+- App ID は App Store Connect への登録まで確定しない。`metronome/Support/ReviewLink.swift` の
   定数 1 か所に置き、**未設定なら行を出さない**
 
 ## アプリアイコン

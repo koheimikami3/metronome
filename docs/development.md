@@ -5,8 +5,8 @@ CLAUDE.md から外した参照情報。構成を把握したいとき・コマ�
 ## ディレクトリ構成
 
 ```
-Metronome/
-├── MetronomeApp.swift          # @main(Flutter の main() + MaterialApp 相当)
+metronome/                     # ソース(metronome.xcodeproj と同階層)
+├── metronomeApp.swift          # @main(Flutter の main() + MaterialApp 相当)
 ├── RootView.swift              # 標準 TabView
 ├── Models/                     # 値型と enum だけ(ロジックも状態も持たない)
 │   ├── Voice.swift             # クリック音色 6 種
@@ -36,7 +36,8 @@ Metronome/
 ├── Support/
 │   ├── Haptics.swift
 │   └── ReviewLink.swift
-└── Assets.xcassets/
+├── Assets.xcassets/
+└── Info.plist                  # UIBackgroundModes だけを持つ(後述)
 ```
 
 分割の粒度: 画面固有の小さな部品は `private var` として画面ファイルに置く。
@@ -60,45 +61,75 @@ Metronome/
 Riverpod の `select` が自動で効く感覚に近い。旧来の `ObservableObject` +
 `@Published` は使わない(1 つの変更で画面全体が再評価される)。
 
-## Xcode プロジェクトの作成
+## Xcode プロジェクトの設定
 
-リポジトリには `.xcodeproj` を含む。新しく作り直すときの設定値:
+`.xcodeproj` はリポジトリに含む。**設定は GUI ではなくビルド設定として
+`project.pbxproj` に入っている**ので、変更したら差分が git に残る。
+
+| 設定 | 値 | 理由 |
+|---|---|---|
+| `PRODUCT_BUNDLE_IDENTIFIER` | `com.kohei.mikami.metronome` | |
+| `IPHONEOS_DEPLOYMENT_TARGET` | `17.0` | Xcode 26 の既定は最新 OS なので、新規作成時は必ず下げる |
+| `TARGETED_DEVICE_FAMILY` | `1` | iPhone のみ |
+| `INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone` | `UIInterfaceOrientationPortrait` | 縦のみ。iPad 用の設定は削除済み |
+| `INFOPLIST_KEY_UIUserInterfaceStyle` | `Light` | システムのシート・アラートまでライトにする |
+| `INFOPLIST_FILE` | `metronome/Info.plist` | `UIBackgroundModes` のためだけに置く(後述) |
+| `MARKETING_VERSION` | `1.0.0` | `docs/release-notes.md` の表記に合わせる |
+
+ホーム画面の表示名 `メトロノーム` は、Assets の `CFBundleDisplayName` ではなく
+Xcode の General → Display Name(= `INFOPLIST_KEY_CFBundleDisplayName`)で設定する。
+
+### Info.plist が必要な理由と、同期グループの例外
+
+`GENERATE_INFOPLIST_FILE = YES` なので Info.plist は基本的に自動生成されるが、
+**`UIBackgroundModes` には対応する `INFOPLIST_KEY_*` が存在しない**。そのため
+`metronome/Info.plist` にこのキーだけを書き、`INFOPLIST_FILE` で指定している
+(Xcode が自動生成分をこのファイルにマージする)。
+
+このプロジェクトは **synchronized folder group**(フォルダに置いたファイルが自動で
+ターゲットに入る仕組み)を使っているので、放っておくと `Info.plist` が
+Copy Bundle Resources にも入って `Multiple commands produce .../Info.plist` で
+ビルドが落ちる。`project.pbxproj` の
+`PBXFileSystemSynchronizedBuildFileExceptionSet` で `Info.plist` を除外してある。
+**この例外を消すとビルドが落ちる。**
+
+### Swift の並行性設定
+
+`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`(Xcode 26 の新規プロジェクト既定)。
+型は既定で `@MainActor` に閉じるので UI コードは書きやすいが、
+**オーディオのスケジューラのようにバックグラウンドで回すものは `nonisolated` を
+明示する**必要がある。言語モードは Swift 5(`SWIFT_VERSION = 5.0`)のまま。
+
+### プロジェクトを作り直すときの設定値
 
 | 項目 | 値 |
 |---|---|
 | Template | iOS > App |
-| Product Name | `Metronome` |
-| Interface / Language | SwiftUI / Swift |
-| Storage | None / Testing System: None / Host in CocoaPods: off |
+| Product Name | `metronome`(**小文字**。Bundle ID が自動で `com.kohei.mikami.metronome` になる) |
 | Organization Identifier | `com.kohei.mikami` |
-| Bundle Identifier | `com.kohei.mikami.metronome` |
-| 保存先 | `~/development/metronome`(Create Git repository はオフ) |
-| Minimum Deployments | iOS 17.0 |
-| Supported Destinations | iPhone のみ |
+| Interface / Language | SwiftUI / Swift |
+| Testing System / Storage | None / None |
+| 保存先 | `~/development/metronome`(Create Git repository は**オフ**) |
 
-作成後に設定すること:
-
-- General → Display Name: `メトロノーム`
-- General → Supported orientations: Portrait のみ
-- Signing & Capabilities → + Capability → **Background Modes → Audio, AirPlay,
-  and Picture in Picture**(これを外すとバックグラウンドで無音になる)
-- Info → `UIUserInterfaceStyle` = `Light`
+Xcode は選んだ場所の中にもう 1 段フォルダを作るので、作成後に
+`.xcodeproj` とソースフォルダを 1 段上げてリポジトリ直下に置き直す。
 
 ## ビルド・実行
 
 ```bash
-# シミュレータ一覧
-xcrun simctl list devices available
+# シミュレータ一覧(id を控える)
+xcrun simctl list devices available | grep iPhone
 
-# コマンドラインでビルド(警告を確認したいとき)
-xcodebuild -project Metronome.xcodeproj -scheme Metronome \
-  -destination 'platform=iOS Simulator,name=iPhone 16' build
-
-# 実機は Xcode から実行する(署名が要るため)
+# ビルド。destination は name より id が確実(同名で OS 違いがあると曖昧になる)
+xcodebuild -project metronome.xcodeproj -scheme metronome \
+  -destination 'id=<simulator-udid>' build
 ```
 
-音のタイミングを見るときは **Release 構成**で実行する
-(Scheme → Edit Scheme → Run → Build Configuration = Release)。
+**ガラス表現を変えたときは iOS 26 系と 17 系の両方でビルドして目視する。**
+`GlassStyle.swift` の 2 分岐は、片方でしかコンパイルされない・描画されないため。
+
+実機は署名が要るので Xcode から実行する。音のタイミングを見るときは
+**Release 構成**(Scheme → Edit Scheme → Run → Build Configuration = Release)。
 
 ## 音のタイミング検証(実機)
 
@@ -143,7 +174,7 @@ Mac の QuickTime か Audacity で iPhone のスピーカー音を録音し、�
 3. 前景 2 枚の Fill: `#FFFFFF` / 100%
 4. Specular ON / Shadow = Neutral / Translucency OFF / Blur 0
 5. Dark の背景色: `#3A2E29`(Tinted / Clear は自動生成のまま)
-6. `Pulse.icon` として書き出し、Target の Build Settings → App Icon で指定
+6. `Pulse.icon` として書き出し、`ASSETCATALOG_COMPILER_APPICON_NAME` で指定
 
 ### iOS 25 以前(フラット PNG)
 

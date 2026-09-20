@@ -15,7 +15,7 @@ iPhone 向けメトロノームアプリ。SwiftUI + Liquid Glass ベース。
 - ディレクトリ構成・Xcode 設定・コマンド・タイミング検証手順: `docs/development.md`
 - ストアに掲載したリリースノートの控え: `docs/release-notes.md`(提出のたびに追記)
 - UI の詳細(レイアウト・配色・寸法)は実装済みアプリと
-  `Metronome/DesignSystem/Theme.swift` / `Ink.swift` のトークンが正基準
+  `metronome/DesignSystem/Theme.swift` / `Ink.swift` のトークンが正基準
 
 ## 技術スタック
 
@@ -31,7 +31,7 @@ iPhone 向けメトロノームアプリ。SwiftUI + Liquid Glass ベース。
 役割ごとのフォルダ構成(詳細は `docs/development.md`)。
 
 ```
-Metronome/
+metronome/
 ├── Models/        # 値型・enum のみ。ロジックも状態も持たない
 ├── Audio/         # ClickSynth / MetronomeEngine / AudioSessionObserver
 ├── State/         # MetronomeStore(@Observable)。Audio と UI の接続層

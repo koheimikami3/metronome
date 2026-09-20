@@ -8,7 +8,7 @@
 - 「何ができるか」だけを書く。実装方法・クラス名は書かない(それは
   [design.md](design.md) とコード)
 - UI の寸法・配色は書かない。参照実装とデザイントークン
-  (`Metronome/DesignSystem/Theme.swift` / `Ink.swift`)が正
+  (`metronome/DesignSystem/Theme.swift` / `Ink.swift`)が正
 - 実装したら消さない。仕様が変わったら書き換える
 
 ---
