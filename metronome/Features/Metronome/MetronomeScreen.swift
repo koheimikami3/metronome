@@ -10,9 +10,9 @@ struct MetronomeScreen: View {
 
     var body: some View {
         // 行間は画面の高さで決める。**広告の領域(100pt)を引くと iPhone SE 系は
-        // 中身に 490pt しか渡らず**、固定の部品で 419pt 使うので振り子に 71pt しか
-        // 残らない。5 か所を 2pt ずつ詰めて 10pt 返す。余裕のある機種
-        // (iPhone 17 Pro は 621pt)は 14 のまま。
+        // 中身に 498pt しか渡らず**、固定の部品で 419pt 使うので振り子が 79pt まで
+        // 縮む。5 か所を 2pt ずつ詰めて 10pt 返す。広告が無ければ SE でも 598pt
+        // 渡るので、そのときは詰めずに 14 のまま。
         GeometryReader { geo in
             VStack(spacing: geo.size.height < 520 ? 12 : 14) {
                 header
