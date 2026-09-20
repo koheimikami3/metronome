@@ -100,26 +100,27 @@ struct SettingsScreen: View {
 
                 // 罫線からの 18 と、下の 6 + カードの内側余白 12 = 18 で
                 // 行を上下の真ん中に置く。詰めるとスライダーが窮屈に見える。
-                HStack(spacing: 14) {
+                HStack(spacing: 18) {
                     Text("音量")
                         .font(.system(size: 15))
                         .kerning(-0.2)
                         .foregroundStyle(Ink.primary)
-                    // 幅は固定しない。つまみは端で半分はみ出すので、
-                    // カードの内側余白 12 がその逃げになる。
+                    // 幅は固定しない。つまみは端で棒から半分(12)はみ出すので、
+                    // 行の左右 8 + カードの内側余白 12 = 20 をその逃げに充てる。
+                    // ラベル側も同じだけ要るので HStack の間隔を 18 取っている。
                     TrackSlider(
                         value: $store.volume,
                         range: 0...1,
                         step: 0.05,
                         label: "音量",
                         valueText: { "\(Int(($0 * 100).rounded()))%" },
-                        height: 8,
-                        knob: 20,
+                        height: 6,
+                        knob: 24,
                         fill: LinearGradient(colors: [theme.accent, theme.accent],
                                              startPoint: .leading, endPoint: .trailing)
                     )
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 8)
                 .padding(.top, 18)
                 .padding(.bottom, 6)
             }
@@ -132,29 +133,27 @@ struct SettingsScreen: View {
         // 内側の余白はクリック音カードと同じ 12。丸が縁に近いと窮屈に見えるうえ、
         // 選択中の丸は外側に 4pt はみ出すリングを持つので、その逃げも要る。
         GlassCard(padding: 12) {
-            VStack(spacing: 10) {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5), spacing: 12) {
-                    ForEach(Theme.all) { candidate in
-                        let isSelected = store.themeKey == candidate.key
-                        Button {
-                            store.selectTheme(candidate.key)
-                        } label: {
-                            Circle()
-                                .fill(LinearGradient(colors: [candidate.light, candidate.deep],
-                                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(width: 42, height: 42)
-                                .overlay(Circle().strokeBorder(Color(hex: "FFFDF9"), lineWidth: isSelected ? 3 : 0))
-                                .overlay(Circle().strokeBorder(candidate.deep, lineWidth: isSelected ? 2 : 0).padding(-4))
-                                .shadow(color: Ink.shadow, radius: 3, y: 2)
-                        }
-                        .buttonStyle(PressScale())
-                        .accessibilityLabel(candidate.name)
-                        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+            // 選択中のテーマ名は**出さない**。選んだ色は丸のリングで分かるので、
+            // 名前は読むものが増えるだけだった。`Theme.name` は消していない
+            // (VoiceOver のラベルに要るし、色を名前で呼べないと不便)。
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5), spacing: 12) {
+                ForEach(Theme.all) { candidate in
+                    let isSelected = store.themeKey == candidate.key
+                    Button {
+                        store.selectTheme(candidate.key)
+                    } label: {
+                        Circle()
+                            .fill(LinearGradient(colors: [candidate.light, candidate.deep],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .frame(width: 42, height: 42)
+                            .overlay(Circle().strokeBorder(Color(hex: "FFFDF9"), lineWidth: isSelected ? 3 : 0))
+                            .overlay(Circle().strokeBorder(candidate.deep, lineWidth: isSelected ? 2 : 0).padding(-4))
+                            .shadow(color: Ink.shadow, radius: 3, y: 2)
                     }
+                    .buttonStyle(PressScale())
+                    .accessibilityLabel(candidate.name)
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                 }
-                Text(theme.name)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(theme.deep)
             }
         }
     }
