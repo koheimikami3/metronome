@@ -97,21 +97,20 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         }
         engine.connect(mixer, to: engine.mainMixerNode, format: format)
 
-        for voice in Voice.allCases {
-            for level in ClickSynth.Level.allCases {
-                clickBuffers[Self.key(voice, level)] = ClickSynth.buffer(voice: voice, level: level, format: format)
-            }
-        }
-
         configureSession()
         observeSession()
-        // 起動直後の 1 音のために、ここでオーディオグラフを回し始める。
-        // 止まったところから動かすと出力ルートの用意に時間がかかり、
-        // **最初の 1 音だけ遅れたり小さくなったり**する。加えて `tick()` は
-        // `lastRenderTime` が取れるまで何もしないので、初回の START は
-        // さらにタイマー 1〜2 回ぶん待たされる。先に空回ししておけば両方揃う。
-        // `.mixWithOthers` なので、鳴らしていない間に他アプリの音は邪魔しない。
-        queue.async { self.ensureEngineRunning() }
+
+        // 36 本の合成(実測 90 ms)と暖機は**キューの上でやる**。ここは
+        // アプリ起動の本線(最初の画面を出すまで)なので、main を塞がない。
+        // `clickBuffers` を読むのも同じキューなので、順番は保証される。
+        queue.async {
+            for voice in Voice.allCases {
+                for level in ClickSynth.Level.allCases {
+                    self.clickBuffers[Self.key(voice, level)] = ClickSynth.buffer(voice: voice, level: level, format: format)
+                }
+            }
+            self.ensureEngineRunning()
+        }
     }
 
     private static func key(_ voice: Voice, _ level: ClickSynth.Level) -> String {
@@ -139,6 +138,9 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                 guard let self else { return }
                 queue.async {
                     self.configureSession()
+                    // 鳴らしていなくても動かし直す。止まったままだと、
+                    // 次に鳴らすときに冷えた状態から起こすことになる。
+                    self.ensureEngineRunning()
                     guard shouldResume, self.wasRunningBeforeInterruption else { return }
                     self.wasRunningBeforeInterruption = false
                     self.startLocked()
@@ -152,7 +154,30 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                     let resume = self.isRunning
                     if resume { self.stopLocked(notify: false) }
                     self.configureSession()
+                    // **構成変更は engine 自体を止める。** 鳴っていないときも
+                    // ここで動かし直さないと、起動時に温めたぶんが無駄になる
+                    // (ルートが決まった直後にこの通知が来ることがある)。
+                    self.ensureEngineRunning()
                     if resume { self.startLocked() }
+                }
+            },
+            onBecameActive: { [weak self] in
+                guard let self else { return }
+                queue.async {
+                    self.configureSession()
+                    self.ensureEngineRunning()
+                }
+            },
+            onEnteredBackground: { [weak self] in
+                guard let self else { return }
+                queue.async {
+                    // 鳴っている最中は触らない(バックグラウンド再生を続ける)。
+                    // 止まっているなら手を引く。空回しのまま背面に居座ると
+                    // アプリが休止できず、電池を使い続ける。
+                    guard !self.isRunning else { return }
+                    self.engine.stop()
+                    try? AVAudioSession.sharedInstance()
+                        .setActive(false, options: [.notifyOthersOnDeactivation])
                 }
             }
         )
@@ -207,6 +232,13 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     // MARK: - queue 上の本体
 
+    /// エンジンとプレイヤーを動いている状態にする。
+    ///
+    /// **鳴らす直前ではなく、起動時・前面復帰時・構成変更時にも呼ぶ。**
+    /// 冷えた状態から動かすと出力ルートの用意に時間がかかり、最初の 1 音だけ
+    /// 遅れて小さく鳴る。`tick()` も `lastRenderTime` が取れるまで何もしないので、
+    /// 初回の START はさらにタイマー 1〜2 回ぶん待たされる。
+    /// `.mixWithOthers` なので、空回ししていても他アプリの音は邪魔しない。
     private func ensureEngineRunning() {
         if !engine.isRunning {
             engine.prepare()

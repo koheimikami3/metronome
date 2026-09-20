@@ -1,4 +1,5 @@
 import AVFoundation
+import UIKit
 
 /// オーディオセッションの割り込みと構成変化を見張る。
 ///
@@ -13,16 +14,24 @@ nonisolated final class AudioSessionObserver: @unchecked Sendable {
     private let onInterruptionEnded: @Sendable (_ shouldResume: Bool) -> Void
     /// 出力先が変わった / エンジンの構成が変わった。張り直しが要る
     private let onConfigurationChanged: @Sendable () -> Void
+    /// 前面に戻ってきた(起動直後を含む)。鳴らす前に温め直す
+    private let onBecameActive: @Sendable () -> Void
+    /// 背面に回った。鳴っていないなら手を引く
+    private let onEnteredBackground: @Sendable () -> Void
 
     private var observers: [NSObjectProtocol] = []
 
     init(engine: AVAudioEngine,
          onInterruptionBegan: @escaping @Sendable () -> Void,
          onInterruptionEnded: @escaping @Sendable (Bool) -> Void,
-         onConfigurationChanged: @escaping @Sendable () -> Void) {
+         onConfigurationChanged: @escaping @Sendable () -> Void,
+         onBecameActive: @escaping @Sendable () -> Void,
+         onEnteredBackground: @escaping @Sendable () -> Void) {
         self.onInterruptionBegan = onInterruptionBegan
         self.onInterruptionEnded = onInterruptionEnded
         self.onConfigurationChanged = onConfigurationChanged
+        self.onBecameActive = onBecameActive
+        self.onEnteredBackground = onEnteredBackground
 
         let center = NotificationCenter.default
 
@@ -73,6 +82,25 @@ nonisolated final class AudioSessionObserver: @unchecked Sendable {
             queue: nil
         ) { [weak self] _ in
             self?.onConfigurationChanged()
+        })
+
+        // アプリの前面・背面。**セッションの用意が済むのは前面に出てからなので、
+        // 起動直後の 1 音のためにここで温め直す**(init での用意だけでは、
+        // 前面に出るまでに構成変更が入ると冷えたままになる)。
+        observers.append(center.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.onBecameActive()
+        })
+
+        observers.append(center.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.onEnteredBackground()
         })
     }
 
