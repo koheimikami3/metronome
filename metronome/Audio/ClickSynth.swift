@@ -91,9 +91,9 @@ nonisolated enum ClickSynth {
     /// うるさく聞こえるので、そのぶんだけ下げる。1.0 は無補正。
     private static func trim(_ voice: Voice) -> Float {
         switch voice {
-        // click は矩形波をやめたので補正が要らなくなった
+        // click と rim は矩形波をやめたので補正が要らなくなった
         case .digital: 0.90
-        case .rim, .cow: 0.85
+        case .cow: 0.85
         default: 1.0
         }
     }
@@ -128,7 +128,9 @@ nonisolated enum ClickSynth {
         // click はさらに控えめ。tanh は頭を潰す = アタックを削るので、
         // 立ちを聴かせたい音では掛けすぎると鈍くなる。
         case .click: 1.6
-        case .rim, .cow: 1.5
+        case .cow: 1.5
+        // rim は矩形波をやめたので、そのぶん掛けられる
+        case .rim: 2.2
         case .claves: 1.6
         case .digital: 1.2
         case .beep, .bell, .marimba: 1.0
@@ -244,9 +246,12 @@ nonisolated enum ClickSynth {
             }
 
         case .beep:
+            // 強弱はオクターブ(880 → 1760)。**重ねる倍音もオクターブにする。**
+            // 以前は 2640 Hz(3f = 完全 12 度)を足していたので、アクセントだけ
+            // 5 度上を向いて聞こえ、弱音と音程が合っていなかった。
             tone(&out, sr: sr, at: 0, f0: accent ? 1760 : 880, f1: nil, dur: d, gain: 1.0, wave: .sine)
             if accent {
-                tone(&out, sr: sr, at: 0, f0: 2640, f1: nil, dur: d * 0.65, gain: 0.35, wave: .sine)
+                tone(&out, sr: sr, at: 0, f0: 3520, f1: nil, dur: d * 0.5, gain: 0.3, wave: .sine)
             }
 
         case .digital:
@@ -263,13 +268,21 @@ nonisolated enum ClickSynth {
                  dur: d * 0.8, gain: 0.5, wave: .sine)
 
         case .rim:
-            // アクセントだけ頭を 5 ms ほどかけて立ち上げる。矩形波を頭から出すと、
-            // 縁を叩いた音というより弾かれたように硬く聞こえる。
-            tone(&out, sr: sr, at: 0, f0: accent ? 620 : 430, f1: 300, dur: d, gain: 1.0,
-                 wave: .square, attack: accent ? 0.02 : 0)
-            // 以前はここに 180 Hz のサインを重ねて胴の厚みを出していたが、
-            // 620→300 のスイープと比が合わず、アクセントだけ音程を外して聞こえた。
-            // 厚みより音程が合っているほうを取る。
+            // リムショットは「スティックが当たる硬い音 + 胴がごく短く鳴る」。
+            // 以前は矩形波を 620→300 と**音の最後まで**滑らせていたので、
+            // 叩いた音ではなく音程が下がっていく音に聞こえていた(音痴の正体)。
+            // スイープは頭の 12% で終わらせ、残りは一定の高さで減衰させる。
+            noise(&out, sr: sr, at: 0, dur: d * 0.05, cutoff: 3200,
+                  gain: accent ? 0.7 : 0.9)
+            tone(&out, sr: sr, at: 0, f0: accent ? 600 : 400, f1: accent ? 540 : 360,
+                 dur: d, gain: 1.0, wave: .triangle, sweep: 0.12,
+                 // アクセントだけ頭をわずかに寝かせる。硬い当たりのまま強くすると
+                 // 縁を叩いた音というより弾かれたように聞こえる。
+                 attack: accent ? 0.02 : 0)
+            // 胴に乗る**整数比でない**鳴り。木と皮が混ざった感じはここで出る。
+            // 倍音(整数比)で足すと音程が濃くなって、また音痴に聞こえる。
+            tone(&out, sr: sr, at: 0, f0: accent ? 1485 : 990, f1: nil,
+                 dur: d * 0.22, gain: 0.35, wave: .sine)
 
         case .cow:
             // 撥が当たる音。これが無いと、鳴っているのは 2 本の矩形波だけになって
@@ -281,11 +294,14 @@ nonisolated enum ClickSynth {
             tone(&out, sr: sr, at: 0, f0: accent ? 640 : 540, f1: nil, dur: d, gain: 1.0, wave: .square)
             // 比を 1.5(完全 5 度)から外す。ぴったり 5 度だと和音として聞こえて、
             // 金属の塊ではなく電子音になる。実物のカウベルも整数比では鳴らない。
-            // 2 本目の頭だけ数 ms かけて立ち上げる。真横に重ねると 2 本の山が
-            // そのまま足し算されて波高だけ上がり、正規化で全体が下がって
-            // 音量を損する(実測で 2 dB)。時刻はずらさないのでフラムにもならない。
+            // **最後まで鳴らさない。** 同じ長さだけ鳴らすと 2 つの音程として
+            // 聞き分けられて「音がダブって」聞こえるので、頭の 3 割で消して
+            // 倍音として溶かす。立ち上がりを少し寝かせるのは、真横に重ねると
+            // 山が足し算されて波高だけ上がり、正規化で全体が下がるため。
             tone(&out, sr: sr, at: 0, f0: accent ? 948 : 800, f1: nil,
-                 dur: d * 0.7, gain: 0.75, wave: .square, attack: 0.06)
+                 dur: d * 0.3, gain: 0.7, wave: .square, attack: 0.1)
+            // 金属の粒。矩形波だけだと減衰の最後まで澄んだままで電子音に聞こえる。
+            noise(&out, sr: sr, at: 0, dur: d * 0.5, cutoff: 2200, gain: 0.2)
 
         case .hat:
             // クローズ / オープンの差は長さだけ。刻みの粒は変えない
