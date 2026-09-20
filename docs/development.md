@@ -192,18 +192,27 @@ Mac の QuickTime か Audacity で iPhone のスピーカー音を録音し、�
 
 1. Icon Composer で New(Canvas 1024×1024)
 2. レイヤーを**下から**追加:
-   `Pulse-01-Background.svg` → `Pulse-02-Body.png` → `Pulse-03-Pendulum.svg`。
+   `Metronome-01-Background.svg` → `Metronome-02-Body.png` → `Metronome-03-Pendulum.svg`。
    **Body と Pendulum は統合しない**(統合すると Liquid Glass のハイライトが
    一体化して奥行きが消える)。Body だけ PNG なのは、腕の周囲を背景色で抜く形を
    ベクターの偶奇塗りで安全に表現できないため
 3. 前景 2 枚の Fill: `#FFFFFF` / 100%
 4. Specular ON / Shadow = Neutral / Translucency OFF / Blur 0
 5. Dark の背景色: `#3A2E29`(Tinted / Clear は自動生成のまま)
-6. `Pulse.icon` として書き出し、`ASSETCATALOG_COMPILER_APPICON_NAME` で指定
+6. **`AppIcon.icon` という名前で**書き出し、`metronome/` 直下(`Assets.xcassets` と
+   同階層)に置く。このフォルダは synchronized group なので、Xcode を開き直せば
+   自動でターゲットに入る。**アセットカタログの中には入れない**
+
+`.icon` とアセットカタログの `AppIcon.appiconset` は**同じ名前のまま両立する**。
+`ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` と
+`ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES` が入っていれば、
+iOS 26 は `.icon`、25 以前はアセットカタログ、と OS が選び分ける。
+**アセットカタログ側を消さないこと** — `.icon` の後方互換描画は 25 以前で
+崩れることがあるので、フラット PNG を残しておく。
 
 ### iOS 25 以前(フラット PNG)
 
-`Pulse-AppIcon-1024.png` はアルファチャンネル付きで、そのままでは App Store Connect に
+`Metronome-AppIcon-1024.png` はアルファチャンネル付きで、そのままでは App Store Connect に
 弾かれる。**JPEG を経由する手は使わない** — このアイコンは平坦な色とくっきりした輪郭だけで
 できていて、JPEG がいちばん苦手な絵柄だから(輪郭にリンギングが出る)。
 白で塗った不透明なビットマップに描き直して PNG で書き出す:
@@ -235,7 +244,7 @@ CGImageDestinationAddImage(dest, flat, nil)
 CGImageDestinationFinalize(dest)
 SWIFT
 
-swift /tmp/flatten.swift ~/Desktop/icon/export/Pulse-AppIcon-1024.png \
+swift /tmp/flatten.swift ~/Desktop/icon/export/Metronome-AppIcon-1024.png \
   metronome/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
 sips -g hasAlpha metronome/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png   # no を確認する
 ```

@@ -109,11 +109,14 @@
 
 2 系統を用意する。どちらか片方では足りない。
 
-- **iOS 26 以降**: Icon Composer で作る `Pulse.icon`。素材は
-  `~/Desktop/icon/export` の SVG 3 枚。**Body と Pendulum は必ず別レイヤーのまま置く**
+- **iOS 26 以降**: Icon Composer で作る `AppIcon.icon`。素材は
+  `~/Desktop/icon/export` の 3 枚。**Body と Pendulum は必ず別レイヤーのまま置く**
   (統合すると Liquid Glass のハイライトが一体化して奥行きが消える)。
   設定値は同ディレクトリの README が正
-- **iOS 25 以前**: フラット合成済みの `Pulse-AppIcon-1024.png`。
+- **名前は `AppIcon` で揃える。** `.icon` と `AppIcon.appiconset` を同じ名前にすると、
+  iOS 26 は `.icon`、25 以前はアセットカタログ、と OS が勝手に選び分ける。
+  別名にすると片方しか使われない
+- **iOS 25 以前**: フラット合成済みの `Metronome-AppIcon-1024.png`。
   **元ファイルはアルファチャンネル付きで、App Store Connect に弾かれる。**
   提出前に不透明化する(手順は [development.md](development.md))
 
