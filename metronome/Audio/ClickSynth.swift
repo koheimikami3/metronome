@@ -104,6 +104,11 @@ nonisolated enum ClickSynth {
     /// この周波数までで打ち切って折り返しを防ぐ。
     private static let harmonicLimit: Double = 12000
 
+    /// ロールオフを始める周波数。`harmonicLimit` で角を立てて打ち切ると、
+    /// スイープ中に倍音が 1 本ずつ出たり消えたりして音が揺れて聞こえる。
+    /// ここから上は滑らかに 0 へ落とす。
+    private static let harmonicFadeFrom: Double = 7200
+
     /// ソフトクリップの強さ。1.0 で無加工。
     ///
     /// ピークを 0.95 まで上げても、クリックは**山が鋭くて平均が低い**ので
@@ -183,14 +188,14 @@ nonisolated enum ClickSynth {
 
         switch voice {
         case .wood:
-            tone(&out, sr: sr, at: 0, f0: accent ? 1500 : 1050, f1: accent ? 900 : 680,
-                 dur: d, gain: 1.0, wave: .triangle)
+            tone(&out, sr: sr, at: 0, f0: accent ? 1500 : 1100, f1: accent ? 1120 : 820,
+                 dur: d, gain: 1.0, wave: .triangle, sweep: 0.25)
             noise(&out, sr: sr, at: 0, dur: d * 0.36, cutoff: accent ? 3000 : 3200,
                   gain: accent ? 0.7 : 0.4)
 
         case .click:
-            tone(&out, sr: sr, at: 0, f0: accent ? 1300 : 900, f1: accent ? 850 : 620,
-                 dur: d, gain: 1.0, wave: .square)
+            tone(&out, sr: sr, at: 0, f0: accent ? 1400 : 1000, f1: accent ? 1000 : 720,
+                 dur: d, gain: 1.0, wave: .square, sweep: 0.2)
             // アクセントだけ上に細いピンを重ねて、音の高さではなく**質感**で差を付ける
             if accent {
                 tone(&out, sr: sr, at: 0, f0: 1800, f1: nil, dur: d * 0.4, gain: 0.3, wave: .sine)
@@ -222,9 +227,9 @@ nonisolated enum ClickSynth {
             }
 
         case .digital:
-            // アクセントは 1 本の上昇スイープ。高さの違う 2 音を並べると
-            // 「ピッピッ」と 2 回鳴ったように聞こえてしまう。
-            tone(&out, sr: sr, at: 0, f0: accent ? 1000 : 800, f1: accent ? 1500 : nil,
+            // 高さを変えるだけで、スイープも 2 音の並びもしない。2 音を並べると
+            // 「ピッピッ」と 2 回鳴ったように、スイープさせると音程が揺れたように聞こえる。
+            tone(&out, sr: sr, at: 0, f0: accent ? 1250 : 800, f1: nil,
                  dur: d, gain: 1.0, wave: .square)
 
         case .bell:
@@ -272,8 +277,12 @@ nonisolated enum ClickSynth {
     /// 終端のゲイン。ここまで指数関数で落とす(-62 dB 相当で聴こえない)。
     private static let endGain = 0.0008
 
+    /// `sweep` は f0 → f1 を**音の頭の何割で渡りきるか**。1 で最後まで引っ張る。
+    /// 打楽器の音程の落ちは実際にはごく短いので、1 のままだと打撃音ではなく
+    /// 「音程が滑っている」ように聞こえる。
     private static func tone(_ out: inout [Float], sr: Double, at start: Double,
-                             f0: Double, f1: Double?, dur: Double, gain: Float, wave: Wave) {
+                             f0: Double, f1: Double?, dur: Double, gain: Float, wave: Wave,
+                             sweep: Double = 1) {
         let startIndex = Int(start * sr)
         let count = Int(dur * sr)
         guard count > 0 else { return }
@@ -283,8 +292,9 @@ nonisolated enum ClickSynth {
             let index = startIndex + i
             if index >= out.count { break }
             let t = Double(i) / Double(count)
-            // f1 があれば f0 → f1 へ指数的にスイープ(WebAudio の exponentialRamp 相当)
-            let frequency = f1.map { f0 * pow($0 / f0, t) } ?? f0
+            // f1 があれば f0 → f1 へ指数的にスイープ(WebAudio の exponentialRamp 相当)。
+            // 渡りきったあとはその高さで伸ばす。
+            let frequency = f1.map { f0 * pow($0 / f0, min(t / max(sweep, 0.001), 1)) } ?? f0
             phase += 2 * Double.pi * frequency / sr
             let sample = waveform(wave, phase: phase, frequency: frequency)
             let envelope = pow(endGain / Double(gain), t)
@@ -304,10 +314,11 @@ nonisolated enum ClickSynth {
             var k = 1
             while Double(k) * frequency < harmonicLimit {
                 let h = Double(k)
+                let rolloff = harmonicRolloff(h * frequency)
                 switch wave {
-                case .square: value += sin(h * phase) / h
+                case .square: value += rolloff * sin(h * phase) / h
                 // 三角波は 1 つおきに符号が反転し、振幅は次数の 2 乗で落ちる
-                case .triangle: value += (k % 4 == 1 ? 1 : -1) * sin(h * phase) / (h * h)
+                case .triangle: value += rolloff * (k % 4 == 1 ? 1 : -1) * sin(h * phase) / (h * h)
                 case .sine: break
                 }
                 k += 2
@@ -317,6 +328,14 @@ nonisolated enum ClickSynth {
             return wave == .square ? value * 4 / Double.pi
                                    : value * 8 / (Double.pi * Double.pi)
         }
+    }
+
+    /// `harmonicFadeFrom` から `harmonicLimit` にかけて 1 → 0 へ落とすレイズドコサイン。
+    private static func harmonicRolloff(_ frequency: Double) -> Double {
+        guard frequency > harmonicFadeFrom else { return 1 }
+        guard frequency < harmonicLimit else { return 0 }
+        let t = (frequency - harmonicFadeFrom) / (harmonicLimit - harmonicFadeFrom)
+        return (1 + cos(.pi * t)) / 2
     }
 
     private static func noise(_ out: inout [Float], sr: Double, at start: Double,
