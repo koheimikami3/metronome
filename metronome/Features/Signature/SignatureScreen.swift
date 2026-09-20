@@ -26,8 +26,10 @@ struct SignatureScreen: View {
                 .kerning(-0.4)
                 .foregroundStyle(Ink.primary)
             Spacer()
+            // 見出しと同じ 22pt。右端の拍子は見出しと対になる情報なので、
+            // 小さくすると「おまけ」に見えてしまう。
             Text(store.signatureLabel)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 22, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(theme.deep)
         }

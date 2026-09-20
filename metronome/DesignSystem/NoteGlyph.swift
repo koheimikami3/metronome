@@ -48,9 +48,10 @@ struct NoteGlyph: View {
                     .offset(y: -1 * scale)
             }
         }
-        // 文字と並べたときに符頭が文字のベースラインに乗るようにする。
-        // 絵の上端 11pt は肩数字のための空きなので、素直に中央で揃えると沈んで見える。
-        .alignmentGuide(.firstTextBaseline) { _ in (baseline + headRadiusY) * scale }
+        // このビューの「中心」は**枠の中心ではなく描いた絵の中心**とする。
+        // 枠の上 11pt は肩数字のための空きなので、枠のまま中央揃えすると絵だけ下にずれる。
+        // 肩数字を数に入れないのは、連符と他の分割で符頭の高さを揃えたいため。
+        .alignmentGuide(VerticalAlignment.center) { _ in (stemTop + baseline + headRadiusY) / 2 * scale }
         .accessibilityHidden(true)   // ラベルは呼び出し側が持つ
     }
 

@@ -46,11 +46,11 @@ struct MetronomeScreen: View {
                     .foregroundStyle(Ink.primary)
                 // 分割は「8分」と書くより音符の絵のほうが早く読める。
                 // 拍子画面のチップと同じ絵なので、どれを選んでいるかが一目で繋がる。
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                HStack(spacing: 6) {
                     Text("\(store.signatureLabel) ・")
-                        .font(.system(size: 14))
+                        .font(.system(size: 16))
                         .foregroundStyle(Ink.muted)
-                    NoteGlyph(subdivision: store.subdivision, color: Ink.muted, scale: 0.62)
+                    NoteGlyph(subdivision: store.subdivision, color: Ink.muted, scale: 0.7)
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(store.signatureLabel) 拍子、\(store.subdivision.label)")
