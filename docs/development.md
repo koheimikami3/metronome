@@ -186,22 +186,35 @@ Mac の QuickTime か Audacity で iPhone のスピーカー音を録音し、�
 
 ## アプリアイコン
 
-素材は `~/Desktop/icon/export`。設定値は同ディレクトリの README が正。
+素材は `~/Desktop/icon/export`。**実際に使った設定値はここが正**
+(同ディレクトリの README はデザイン側の初期案で、Translucency と背景の扱いが違う)。
 
 ### iOS 26 以降(Icon Composer)
 
 1. Icon Composer で New(Canvas 1024×1024)
-2. レイヤーを**下から**追加:
-   `Metronome-01-Background.svg` → `Metronome-02-Body.png` → `Metronome-03-Pendulum.svg`。
-   **Body と Pendulum は統合しない**(統合すると Liquid Glass のハイライトが
-   一体化して奥行きが消える)。Body だけ PNG なのは、腕の周囲を背景色で抜く形を
-   ベクターの偶奇塗りで安全に表現できないため
+2. **前景 2 枚だけ**を下から追加: `Metronome-02-Body.png` → `Metronome-03-Pendulum.svg`
+   - **背景の SVG は読み込まない。** 背景をレイヤーにすると Liquid Glass の対象になり、
+     Dark / Mono の自動生成が崩れる。背景はキャンバスの塗りで指定する(手順 5)
+   - **Body と Pendulum は統合しない。** 統合すると Liquid Glass のハイライトが
+     一体化して奥行きが消える
+   - Body だけ PNG なのは、腕の周囲を背景色で抜く形をベクターの偶奇塗りで
+     安全に表現できないため
 3. 前景 2 枚の Fill: `#FFFFFF` / 100%
-4. Specular ON / Shadow = Neutral / Translucency OFF / Blur 0
-5. Dark の背景色: `#3A2E29`(Tinted / Clear は自動生成のまま)
-6. **`AppIcon.icon` という名前で**書き出し、`metronome/` 直下(`Assets.xcassets` と
-   同階層)に置く。このフォルダは synchronized group なので、Xcode を開き直せば
-   自動でターゲットに入る。**アセットカタログの中には入れない**
+4. **`Group` を選んで** Liquid Glass を設定:
+   Specular ON / Blur OFF / **Translucency ON 40%** / Shadow = Neutral 50%
+   - これらは**レイヤーではなくグループの設定**。レイヤー選択時に出る `Effects` は
+     「そのレイヤーにガラスを乗せるか」だけの別物
+   - Translucency を切ると平板になり、上げすぎると前景が地の色を拾って
+     小さい表示で輪郭が消える。40% は両方を見て決めた値
+5. **`Icon`(キャンバス)を選んで**背景を Solid で指定。インスペクタ右上のスコープを
+   切り替えて 2 つ入れる: Default = `#A08170` / Dark = `#3A2E29`
+   - 16 進入力は macOS のカラーパネル → 左から 2 番目のタブ → RGB スライダ →
+     「16進カラー #」。カラーホイールのタブには入力欄が無い
+   - Mono(ティント)は自動生成。触らない
+6. **File → Save As** で `AppIcon.icon` として `metronome/` 直下(`Assets.xcassets` と
+   同階層)に保存する。`.icon` は書類形式そのものなので **Export ではない**。
+   このフォルダは synchronized group なので、保存すれば自動でターゲットに入る。
+   **アセットカタログの中には入れない**
 
 `.icon` とアセットカタログの `AppIcon.appiconset` は**同じ名前のまま両立する**。
 `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` と
