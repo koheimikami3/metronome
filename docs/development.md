@@ -192,8 +192,10 @@ Mac の QuickTime か Audacity で iPhone のスピーカー音を録音し、�
 
 1. Icon Composer で New(Canvas 1024×1024)
 2. レイヤーを**下から**追加:
-   `Pulse-01-Background.svg` → `Pulse-02-Body.svg` → `Pulse-03-Pendulum.svg`。
-   **Body と Pendulum は統合しない**
+   `Pulse-01-Background.svg` → `Pulse-02-Body.png` → `Pulse-03-Pendulum.svg`。
+   **Body と Pendulum は統合しない**(統合すると Liquid Glass のハイライトが
+   一体化して奥行きが消える)。Body だけ PNG なのは、腕の周囲を背景色で抜く形を
+   ベクターの偶奇塗りで安全に表現できないため
 3. 前景 2 枚の Fill: `#FFFFFF` / 100%
 4. Specular ON / Shadow = Neutral / Translucency OFF / Blur 0
 5. Dark の背景色: `#3A2E29`(Tinted / Clear は自動生成のまま)
@@ -202,13 +204,40 @@ Mac の QuickTime か Audacity で iPhone のスピーカー音を録音し、�
 ### iOS 25 以前(フラット PNG)
 
 `Pulse-AppIcon-1024.png` はアルファチャンネル付きで、そのままでは App Store Connect に
-弾かれる。JPEG を経由して不透明化する:
+弾かれる。**JPEG を経由する手は使わない** — このアイコンは平坦な色とくっきりした輪郭だけで
+できていて、JPEG がいちばん苦手な絵柄だから(輪郭にリンギングが出る)。
+白で塗った不透明なビットマップに描き直して PNG で書き出す:
 
 ```bash
-cd ~/Desktop/icon/export
-sips -s format jpeg Pulse-AppIcon-1024.png --out /tmp/flat.jpg
-sips -s format png /tmp/flat.jpg --out AppIcon-1024-opaque.png
-sips -g hasAlpha AppIcon-1024-opaque.png      # no を確認する
+cat > /tmp/flatten.swift <<'SWIFT'
+import CoreGraphics
+import Foundation
+import ImageIO
+import UniformTypeIdentifiers
+
+let inURL = URL(fileURLWithPath: CommandLine.arguments[1])
+let outURL = URL(fileURLWithPath: CommandLine.arguments[2])
+guard let source = CGImageSourceCreateWithURL(inURL as CFURL, nil),
+      let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { exit(1) }
+
+let w = image.width, h = image.height
+guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                          space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                          bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { exit(1) }
+ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+guard let flat = ctx.makeImage(),
+      let dest = CGImageDestinationCreateWithURL(outURL as CFURL, UTType.png.identifier as CFString, 1, nil)
+else { exit(1) }
+CGImageDestinationAddImage(dest, flat, nil)
+CGImageDestinationFinalize(dest)
+SWIFT
+
+swift /tmp/flatten.swift ~/Desktop/icon/export/Pulse-AppIcon-1024.png \
+  metronome/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
+sips -g hasAlpha metronome/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png   # no を確認する
 ```
 
 ## 技術的な疑問の解決
