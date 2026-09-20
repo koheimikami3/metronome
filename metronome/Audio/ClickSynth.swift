@@ -66,7 +66,7 @@ nonisolated enum ClickSynth {
         case .click:   (0.024, 0.048, 0.06)
         case .claves:  (0.035, 0.06, 0.08)
         case .tick:    (0.02, 0.035, 0.35)
-        case .mech:    (0.03, 0.06, 0.08)
+        case .mech:    (0.04, 0.09, 0.115)
         case .bell:    (0.08, 0.30, 0.50)
         case .beep:    (0.04, 0.09, 0.12)
         case .digital: (0.035, 0.07, 0.10)
@@ -120,7 +120,12 @@ nonisolated enum ClickSynth {
     private static func drive(_ voice: Voice) -> Float {
         switch voice {
         // ノイズ系は折り返しが起きないので強く掛けられる
-        case .tick, .mech, .hat: 3.0
+        case .tick, .hat: 3.0
+        // mech は**頭の立ちが命**なので浅く掛ける。tanh は山を潰す = アタックを
+        // 削るので、ここを強くすると「カチャッ」が「コッ」に丸まる。
+        // 2.7 から下げたぶんの音量は、長さを 0.08 → 0.115 秒にして取り返している
+        // (波高率 +1.7 dB = それだけ頭が立ったまま、総エネルギーは据え置き)
+        case .mech: 2.2
         // wood は倍音が増えるとそのまま「甲高さ」になるので控えめに
         case .wood: 1.5
         // 倍音で作っている波形は、掛けすぎると帯域制限した意味が無くなる。
@@ -222,25 +227,29 @@ nonisolated enum ClickSynth {
                  dur: d, gain: 0.85, wave: .triangle, sweep: 0.15)
 
         case .mech:
-            // 実物の機械式メトロノーム。**鳴っているのは木の胴ではなく、鋼の
-            // アンクルが歯車の歯を 1 つ逃がす瞬間の金属接触**で、耳に届くのは
-            // ほとんど短い雑音の塊。音程のある層を長く鳴らすと、とたんに
-            // 「ポコッ」という胴の音になるので、サインは 20 ms 以内で消す。
-            // 接触は**ひと叩きではなく 2 回**で、この 2 回目が「チャ」に当たる。
-            //   1. 歯を逃がす接触。2 kHz から上に広く伸ばす(「カ」)
-            //   2. 4.5 ms 後、歯が受けに落ちる 2 度目の接触(「チャ」)
-            //   3. 鋼の短い鳴り。20 ms で消えるので音程には聞こえない
-            //   4. 木の箱の応え。これも雑音で、音程は持たせない
-            noise(&out, sr: sr, at: 0, dur: d * 0.08, cutoff: accent ? 2600 : 2200, gain: 1.0)
+            // 実物の機械式メトロノームの「カチャッ」。鳴っているのは振り子ではなく
+            // アンクルが歯車を弾く**エスケープメント**で、ひと叩きではなく
+            // ごく短い接触が 2 回続く。この 2 回目が「チャ」に当たる。
+            //   1. 撃鉄が当たる 2〜3 ms の接触音(広い帯域)
+            //   2. その直後の、弱くて高い当たり
+            //   3. そのあと木の箱が短く鳴る胴鳴り
+            // 箱の共鳴は整数倍にならないので、**比の合わない高さのサインを重ねる**。
+            // 倍音を積むと箱ではなく楽器の音になる。
+            //
+            // 頭を立てるために効くのは**打撃と胴の比**。打撃だけ上げても正規化で
+            // 全体が一緒に下がるので比は変わらない。胴の 3 層をまとめて下げている。
+            noise(&out, sr: sr, at: 0, dur: d * 0.045, cutoff: accent ? 5200 : 4600, gain: 1.0)
             // 2 回目の当たりは**機構の間隔なので音の長さに比例しない**。
             // d を掛けずに 4.5 ms 固定で置く。
-            noise(&out, sr: sr, at: 0.0045, dur: d * 0.12, cutoff: accent ? 3400 : 2900,
-                  gain: 0.7)
-            tone(&out, sr: sr, at: 0, f0: accent ? 4100 : 3500, f1: nil,
-                 dur: d * 0.3, gain: 0.3, wave: .sine)
-            tone(&out, sr: sr, at: 0, f0: accent ? 6300 : 5400, f1: nil,
-                 dur: d * 0.2, gain: 0.2, wave: .sine)
-            noise(&out, sr: sr, at: 0, dur: d, cutoff: 800, gain: 0.45)
+            noise(&out, sr: sr, at: 0.0045, dur: d * 0.06, cutoff: accent ? 3600 : 3200,
+                  gain: 0.55)
+            noise(&out, sr: sr, at: 0, dur: d * 0.35, cutoff: 1400, gain: 0.3)
+            tone(&out, sr: sr, at: 0, f0: accent ? 1380 : 1150, f1: nil,
+                 dur: d * 0.6, gain: 0.3, wave: .sine)
+            tone(&out, sr: sr, at: 0, f0: accent ? 2260 : 1880, f1: nil,
+                 dur: d * 0.35, gain: 0.22, wave: .sine)
+            tone(&out, sr: sr, at: 0, f0: accent ? 700 : 590, f1: nil,
+                 dur: d, gain: 0.28, wave: .sine)
 
         case .tick:
             // 機械式メトロノームそのままに、アクセントは「カチ + 鈴」。
