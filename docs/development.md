@@ -123,12 +123,25 @@ Xcode は選んだ場所の中にもう 1 段フォルダを作るので、作�
 | SKU | `com.kohei.mikami.metronome` | **変更不可** |
 | バンドルID | `com.kohei.mikami.metronome` | 初回ビルドのアップロード後は変更不可 |
 | 掲載名 | `メトロノーム - 拍子・テンポ・BPM` | 30 文字上限。新バージョンの審査と一緒になら変更できる |
+| カテゴリ | ミュージック | ビルド設定の `INFOPLIST_KEY_LSApplicationCategoryType`(`public.app-category.music`)。Xcode の General → App Category と同じもの |
 
 掲載名は検索を意識して決めている。上位 2 本(Gismart / Yamaha)の日本語名に
 **「拍子」と「BPM」が入っていない**ので、そこを取りにいった形。検索インデックスは
 名前 + サブタイトル + キーワード欄の 3 枠で、**同じ語を重複させても加点されない**ため、
 サブタイトルとキーワード欄には名前に出てこない語(タップテンポ・アクセント・連符、
 楽器名など)を入れる。
+
+### 提出のために置いてあるもの
+
+- **`metronome/PrivacyInfo.xcprivacy`** — Required Reason API の宣言。
+  `UserDefaults`(`CA92.1`)と `CACurrentMediaTime`(= system boot time、`35F9.1`)を
+  使っているので、無いとアップロード後に **ITMS-91053** の警告が届く。
+  収集もトラッキングもしないので、その 2 つ以外は空
+- **`ITSAppUsesNonExemptEncryption = false`**(`metronome/Info.plist`)—
+  暗号化を使っていない宣言。**入れておくとアップロードのたびの輸出コンプライアンスの
+  質問が出ない**
+- どちらも**同期フォルダグループがそのままターゲットに入れる**ので、
+  `project.pbxproj` 側の追加設定は要らない(`Info.plist` のような例外指定も不要)
 
 ## ビルド・実行
 

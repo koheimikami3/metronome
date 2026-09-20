@@ -8,5 +8,10 @@
 	<array>
 		<string>audio</string>
 	</array>
+
+	<!-- 暗号化は一切使っていない。入れておくと、アップロードのたびに
+	     輸出コンプライアンスを聞かれるのを省ける。 -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
