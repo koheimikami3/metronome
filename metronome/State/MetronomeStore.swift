@@ -15,13 +15,20 @@ final class MetronomeStore {
 
     // MARK: - 永続化する設定
 
-    var bpm: Int = 112 {
-        didSet {
-            bpm = Tempo.clamped(bpm)
-            guard bpm != oldValue else { return }
-            syncEngine()
-            schedulePersist()
-        }
+    // MARK: 範囲を丸めるプロパティは didSet を使わない
+    //
+    // @Observable はプロパティを計算プロパティに書き換えるので、**didSet の中で
+    // 自分自身に代入すると didSet が呼び直されて無限再帰する**(素の Swift では
+    // 起きない)。丸めが要るものは private(set) + セッターにしてある。
+
+    private(set) var bpm = 112
+
+    func setBpm(_ value: Int) {
+        let clamped = Tempo.clamped(value)
+        guard clamped != bpm else { return }
+        bpm = clamped
+        syncEngine()
+        schedulePersist()
     }
 
     var numerator = 4 {
@@ -40,20 +47,21 @@ final class MetronomeStore {
             if !TimeSignature.numerators(for: denominator).contains(numerator) {
                 numerator = TimeSignature.numerators(for: denominator).first ?? 4
             }
-            subdivisionIndex = 0   // 分割の選択肢ごと変わるので先頭に戻す
+            setSubdivisionIndex(0)   // 分割の選択肢ごと変わるので先頭に戻す
             normalizeAccents()
             syncEngine()
             schedulePersist()
         }
     }
 
-    var subdivisionIndex = 0 {
-        didSet {
-            subdivisionIndex = min(max(subdivisionIndex, 0), subdivisionOptions.count - 1)
-            guard subdivisionIndex != oldValue else { return }
-            syncEngine()
-            schedulePersist()
-        }
+    private(set) var subdivisionIndex = 0
+
+    func setSubdivisionIndex(_ index: Int) {
+        let clamped = min(max(index, 0), subdivisionOptions.count - 1)
+        guard clamped != subdivisionIndex else { return }
+        subdivisionIndex = clamped
+        syncEngine()
+        schedulePersist()
     }
 
     var accents: [AccentLevel] = [.strong, .weak, .weak, .weak] {
@@ -79,6 +87,8 @@ final class MetronomeStore {
         }
     }
 
+    /// スライダーが 0...1 の範囲しか渡さないので丸めは要らない。
+    /// もし範囲外を入れる経路を足すなら、bpm と同じくセッターにすること。
     var volume: Double = 0.8 {
         didSet {
             guard volume != oldValue else { return }
@@ -207,7 +217,7 @@ final class MetronomeStore {
     }
 
     func nudgeBpm(_ delta: Int) {
-        bpm += delta
+        setBpm(bpm + delta)
         Haptics.soft()
     }
 
@@ -234,7 +244,7 @@ final class MetronomeStore {
         taps.append(now)
         if taps.count > 1 {
             let interval = (now - taps[0]) / Double(taps.count - 1)
-            bpm = Tempo.clamped(Int((60 / interval).rounded()))
+            setBpm(Int((60 / interval).rounded()))
         }
         engine.preview(voice)
         Haptics.light()
@@ -335,7 +345,7 @@ final class MetronomeStore {
     /// 保存値の読み戻し。`didSet` を通さずに入れたいので、検証してから直接代入する。
     private func load() {
         if let stored = defaults.object(forKey: Key.bpm) as? Int {
-            bpm = Tempo.clamped(stored)
+            setBpm(stored)
         }
         if let stored = defaults.object(forKey: Key.denominator) as? Int,
            TimeSignature.denominators.contains(stored) {
@@ -346,7 +356,7 @@ final class MetronomeStore {
             numerator = stored
         }
         if let stored = defaults.object(forKey: Key.subdivisionIndex) as? Int {
-            subdivisionIndex = min(max(stored, 0), subdivisionOptions.count - 1)
+            setSubdivisionIndex(stored)
         }
         if let stored = defaults.array(forKey: Key.accents) as? [Int] {
             let restored = stored.compactMap(AccentLevel.init(rawValue:))
@@ -362,7 +372,8 @@ final class MetronomeStore {
             themeKey = "caramel"   // 初回起動の既定(デザインの標準色)
         }
         if let stored = defaults.object(forKey: Key.volume) as? Double {
-            volume = min(max(stored, 0), 1)
+            let clamped = min(max(stored, 0), 1)
+            if clamped != volume { volume = clamped }
         }
         if defaults.object(forKey: Key.bellOnDownbeat) != nil {
             bellOnDownbeat = defaults.bool(forKey: Key.bellOnDownbeat)

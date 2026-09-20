@@ -32,7 +32,7 @@ struct MetronomeScreen: View {
                 .keyboardType(.numberPad)
             Button("キャンセル", role: .cancel) {}
             Button("決定") {
-                if let value = Int(bpmInput) { store.bpm = value }
+                if let value = Int(bpmInput) { store.setBpm(value) }
             }
         } message: {
             Text("\(Tempo.range.lowerBound)〜\(Tempo.range.upperBound) の範囲で入力してください")
@@ -79,7 +79,7 @@ struct MetronomeScreen: View {
                 }
                 TrackSlider(
                     value: Binding(get: { Double(store.bpm) },
-                                   set: { store.bpm = Int($0.rounded()) }),
+                                   set: { store.setBpm(Int($0.rounded())) }),
                     range: Tempo.sliderRange,
                     label: "テンポ",
                     valueText: { "\(Int($0)) BPM" },
@@ -131,7 +131,7 @@ struct MetronomeScreen: View {
             ForEach(Tempo.presets, id: \.self) { value in
                 let isSelected = store.bpm == value
                 Button {
-                    store.bpm = value
+                    store.setBpm(value)
                     Haptics.soft()
                 } label: {
                     Text("\(value)")

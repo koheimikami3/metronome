@@ -169,7 +169,7 @@ struct SignatureScreen: View {
                     ForEach(Array(store.subdivisionOptions.enumerated()), id: \.offset) { index, subdivision in
                         let isSelected = store.subdivisionIndex == index
                         Button {
-                            store.subdivisionIndex = index
+                            store.setSubdivisionIndex(index)
                             Haptics.soft()
                         } label: {
                             NoteGlyph(subdivision: subdivision, color: isSelected ? .white : Ink.secondary)

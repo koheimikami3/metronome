@@ -129,6 +129,13 @@ xcodebuild -project metronome.xcodeproj -scheme metronome \
 **ガラス表現を変えたときは iOS 26 系と 17 系の両方でビルドして目視する。**
 `GlassStyle.swift` の 2 分岐は、片方でしかコンパイルされない・描画されないため。
 
+起動確認は `xcrun simctl launch` のあと **クラッシュレポートを見る**。
+`launchctl list` はプロセスが落ちてもジョブ行を返すので、生存確認に使えない。
+
+```bash
+ls -t ~/Library/Logs/DiagnosticReports/ | grep -i metronome | head
+```
+
 実機は署名が要るので Xcode から実行する。音のタイミングを見るときは
 **Release 構成**(Scheme → Edit Scheme → Run → Build Configuration = Release)。
 

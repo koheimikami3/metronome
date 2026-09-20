@@ -45,6 +45,15 @@
   同期フォルダグループがこのファイルをリソースとしても複製しようとするので、
   `project.pbxproj` の例外セットで除外してある(詳細は [development.md](development.md))
 
+## 状態管理(@Observable)
+
+- **`didSet` の中で自分自身に代入しない。** `@Observable` はプロパティを計算
+  プロパティに書き換えるため、素の Swift と違って**自己代入が `didSet` を呼び直し、
+  無限再帰でスタックオーバーフローする**。範囲の丸めが要るプロパティは
+  `private(set)` + セッター(`setBpm` / `setSubdivisionIndex`)にする
+- 起動が落ちるかどうかは `launchctl list` では分からない(落ちてもジョブ行が残る)。
+  `~/Library/Logs/DiagnosticReports/` の `.ips` を見ること
+
 ## 見た目
 
 - **ガラス表現の分岐は `metronome/DesignSystem/GlassStyle.swift` だけ。** iOS 26 以降は
