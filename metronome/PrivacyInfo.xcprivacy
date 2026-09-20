@@ -2,37 +2,27 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- トラッキングも収集もしない。SDK を 1 つも入れていないので、
-	     ここが空であることがそのまま App Store Connect の
-	     「データを収集しません」と一致する。 -->
 	<key>NSPrivacyTracking</key>
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array/>
-
-	<!-- Required Reason API。宣言しないとアップロード後に ITMS-91053 の
-	     警告が届く(将来は弾かれる)。 -->
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
 		<dict>
-			<!-- テンポ・拍子・音色などの設定を UserDefaults に保存している -->
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPIReasons</key>
 			<array>
-				<!-- CA92.1: 自アプリのデータの読み書きにのみ使う -->
 				<string>CA92.1</string>
 			</array>
 		</dict>
 		<dict>
-			<!-- CACurrentMediaTime()(= mach_absolute_time)で拍の時刻を測っている -->
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
 			<key>NSPrivacyAccessedAPIReasons</key>
 			<array>
-				<!-- 35F9.1: アプリ内で起きた出来事の間隔を測る / タイマーに使う -->
 				<string>35F9.1</string>
 			</array>
 		</dict>
