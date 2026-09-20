@@ -97,16 +97,6 @@ final class MetronomeStore {
         }
     }
 
-    /// 強拍に鈴を重ねる。切り替える UI は無く、常にオン(要件どおり)。
-    /// 設定を足すときのために状態としては持っておく。
-    var bellOnDownbeat = true {
-        didSet {
-            guard bellOnDownbeat != oldValue else { return }
-            syncEngine()
-            schedulePersist()
-        }
-    }
-
     // MARK: - 再生状態(永続化しない)
 
     private(set) var isRunning = false {
@@ -322,8 +312,7 @@ final class MetronomeStore {
                 beatCount: beatCount,
                 pulsesPerBeat: subdivision.pulses,
                 voice: voice,
-                accents: accents,
-                bellOnDownbeat: bellOnDownbeat
+                accents: accents
             )
         )
     }
@@ -339,7 +328,6 @@ final class MetronomeStore {
         static let voice = "voice"
         static let theme = "theme"
         static let volume = "volume"
-        static let bellOnDownbeat = "bellOnDownbeat"
     }
 
     private var persistTask: Task<Void, Never>?
@@ -363,7 +351,6 @@ final class MetronomeStore {
         defaults.set(voice.rawValue, forKey: Key.voice)
         defaults.set(themeKey, forKey: Key.theme)
         defaults.set(volume, forKey: Key.volume)
-        defaults.set(bellOnDownbeat, forKey: Key.bellOnDownbeat)
     }
 
     /// 保存値の読み戻し。`didSet` を通さずに入れたいので、検証してから直接代入する。
@@ -398,9 +385,6 @@ final class MetronomeStore {
         if let stored = defaults.object(forKey: Key.volume) as? Double {
             let clamped = min(max(stored, 0), 1)
             if clamped != volume { volume = clamped }
-        }
-        if defaults.object(forKey: Key.bellOnDownbeat) != nil {
-            bellOnDownbeat = defaults.bool(forKey: Key.bellOnDownbeat)
         }
         normalizeAccents()
     }

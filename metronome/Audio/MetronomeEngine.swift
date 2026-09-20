@@ -20,7 +20,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         var pulsesPerBeat: Int = 1
         var voice: Voice = .wood
         var accents: [AccentLevel] = [.strong, .weak, .weak, .weak]
-        var bellOnDownbeat = true
 
         /// 小節の構成が変わったか。変わったときだけ小節の頭を取り直す。
         func barLayoutDiffers(from other: Settings) -> Bool {
@@ -44,14 +43,14 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     /// 拍のクリック用。**時刻が重なるバッファは混ざらず前の音が打ち切られる**ので、
     /// 連続する音を別ノードに振り分けて鳴らし切らせる。
     private let clickPlayers: [AVAudioPlayerNode]
-    /// 鈴は減衰が長く、必ずクリックと同時刻に鳴るので専用ノードにする。
-    private let bellPlayer = AVAudioPlayerNode()
+    /// アクセントは音色によって減衰が長い(メトロの鈴やオープンハットは 0.25〜0.5 秒)。
+    /// 刻みと同じ列に混ぜると次の音に打ち切られるので、専用の列に分ける。
+    private let accentPlayers: [AVAudioPlayerNode]
     /// 音色プレビュー・タップテンポ用。予約列に割り込ませたいので分ける。
     private let previewPlayer = AVAudioPlayerNode()
 
     private let format: AVAudioFormat
     private var clickBuffers: [String: AVAudioPCMBuffer] = [:]
-    private var bellBuffer: AVAudioPCMBuffer!
 
     private var sessionObserver: AudioSessionObserver?
 
@@ -67,6 +66,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     /// 小節の先頭から数えた発音の通し番号
     private var pulseIndex = 0
     private var clickPlayerCursor = 0
+    private var accentPlayerCursor = 0
     /// 割り込み前に鳴っていたか。復帰の判断に使う。
     private var wasRunningBeforeInterruption = false
 
@@ -78,18 +78,22 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     init() {
         let format = AVAudioFormat(standardFormatWithSampleRate: ClickSynth.sampleRate, channels: 2)!
         self.format = format
-        // 同時に鳴りうるクリックの数 + 余裕。280 BPM の 16 分(発音間隔 36 ms)で
-        // いちばん長いカウベル(100 ms)を鳴らし切るには 3 つ要る。
-        self.clickPlayers = (0..<4).map { _ in AVAudioPlayerNode() }
+        // 同時に鳴りうる音の数 + 余裕。280 BPM の 16 分は発音間隔が 36 ms しかないので、
+        // 本数が足りないと前の音が減衰しきる前に打ち切られてプツッと鳴る。
+        // 6 本あれば、いちばん長い刻み(ベルの 0.30 秒)でも切られるのは 216 ms 後、
+        // その時点で -42 dB まで落ちているので聴こえない。
+        self.clickPlayers = (0..<6).map { _ in AVAudioPlayerNode() }
+        // アクセントは最長 0.5 秒。全拍アクセントの 280 BPM(拍間 214 ms)でも
+        // 鳴らし切れるように 3 本。
+        self.accentPlayers = (0..<3).map { _ in AVAudioPlayerNode() }
 
         engine.attach(mixer)
-        for player in clickPlayers + [bellPlayer, previewPlayer] {
+        for player in clickPlayers + accentPlayers + [previewPlayer] {
             engine.attach(player)
             engine.connect(player, to: mixer, format: format)
         }
         engine.connect(mixer, to: engine.mainMixerNode, format: format)
 
-        bellBuffer = ClickSynth.bellBuffer(format: format)
         for voice in Voice.allCases {
             for level in ClickSynth.Level.allCases {
                 clickBuffers[Self.key(voice, level)] = ClickSynth.buffer(voice: voice, level: level, format: format)
@@ -195,7 +199,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             engine.prepare()
             try? engine.start()
         }
-        for player in clickPlayers + [bellPlayer, previewPlayer] where !player.isPlaying {
+        for player in clickPlayers + accentPlayers + [previewPlayer] where !player.isPlaying {
             player.play()
         }
     }
@@ -224,7 +228,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
         // stop() で予約済みバッファが捨てられ、プレイヤー時間も 0 に戻る。
         // ノード時間との対応は playerTime(forNodeTime:) で取り直すので問題ない。
-        for player in clickPlayers + [bellPlayer] {
+        for player in clickPlayers + accentPlayers {
             player.stop()
             player.play()
         }
@@ -263,9 +267,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             if isBeatHead {
                 if accent != .rest {
                     schedule(level: accent == .strong ? .strong : .weak, atNodeSample: nextNodeSample)
-                    if accent == .strong && settings.bellOnDownbeat {
-                        schedule(buffer: bellBuffer, on: bellPlayer, atNodeSample: nextNodeSample)
-                    }
                 }
                 notifyBeat(beat, nodeSample: nextNodeSample, renderTime: renderTime,
                            nowSeconds: nowSeconds, outputDelay: outputDelay, sampleRate: sampleRate)
@@ -280,8 +281,14 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     private func schedule(level: ClickSynth.Level, atNodeSample sample: AVAudioFramePosition) {
         guard let buffer = clickBuffers[Self.key(settings.voice, level)] else { return }
-        let player = clickPlayers[clickPlayerCursor]
-        clickPlayerCursor = (clickPlayerCursor + 1) % clickPlayers.count
+        let player: AVAudioPlayerNode
+        if level.isAccent {
+            player = accentPlayers[accentPlayerCursor]
+            accentPlayerCursor = (accentPlayerCursor + 1) % accentPlayers.count
+        } else {
+            player = clickPlayers[clickPlayerCursor]
+            clickPlayerCursor = (clickPlayerCursor + 1) % clickPlayers.count
+        }
         schedule(buffer: buffer, on: player, atNodeSample: sample)
     }
 
