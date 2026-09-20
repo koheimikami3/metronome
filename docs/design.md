@@ -51,6 +51,10 @@
   プロパティに書き換えるため、素の Swift と違って**自己代入が `didSet` を呼び直し、
   無限再帰でスタックオーバーフローする**。範囲の丸めが要るプロパティは
   `private(set)` + セッター(`setBpm` / `setSubdivisionIndex`)にする
+- **1 拍ごとに変わる値(`step` / `currentBeatStartedAt`)は、それを使うビューの中で
+  読む。** 親の body で読んで子に引数で渡すと、画面全体が 1 拍ごとに作り直しになり、
+  `@Observable` の「読んだプロパティだけ購読する」利点が消える。タップの最中に
+  ボタンが作り直されると反応を落としかねないので、性能だけの話ではない
 - 起動が落ちるかどうかは `launchctl list` では分からない(落ちてもジョブ行が残る)。
   `~/Library/Logs/DiagnosticReports/` の `.ips` を見ること
 

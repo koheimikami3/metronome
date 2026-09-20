@@ -6,7 +6,11 @@ import AVFoundation
 /// リアルタイムのオーディオスレッドで合成すると、テンポが速いときに間に合わない。
 ///
 /// レシピ(周波数・長さ・波形)はデザインの Web プロトタイプ(WebAudio)と同値。
-enum ClickSynth {
+///
+/// `nonisolated`: このプロジェクトは `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` なので
+/// 何もしないと MainActor に閉じてしまうが、呼ぶのは MetronomeEngine のスケジューラ側。
+/// 状態を持たない純粋な計算なので、どのスレッドから呼んでも問題ない。
+nonisolated enum ClickSynth {
 
     static let sampleRate: Double = 44100
 

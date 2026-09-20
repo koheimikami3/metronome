@@ -182,8 +182,10 @@ final class MetronomeStore {
         }
     }
 
-    var beatCaption: String {
-        "\(beatCount) 拍 / 小節" + (group == 3 ? "(複合拍子・3つずつ)" : "")
+    /// 複合拍子のときだけ出す補足。単純拍子では「分子 = 拍数」で、分子チップと
+    /// 見出しがすでに言っていることの繰り返しにしかならないので出さない。
+    var compoundCaption: String? {
+        group == 3 ? "\(beatCount) 拍 / 小節(3つずつ)" : nil
     }
 
     // MARK: - 操作
@@ -202,7 +204,10 @@ final class MetronomeStore {
     }
 
     private func stop() {
-        engine.stop()
+        // 通知は受け取らない。エンジンは別キューなので、通知を往復させると
+        // 「停止 → すぐ開始」したときに**開始したあとで停止通知が届く**ことがあり、
+        // 音は鳴っているのに画面が START に戻ってしまう。
+        engine.stop(notify: false)
         handleEngineStopped()
     }
 

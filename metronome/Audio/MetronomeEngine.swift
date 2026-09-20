@@ -172,8 +172,10 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         queue.async { self.startLocked() }
     }
 
-    func stop() {
-        queue.async { self.stopLocked(notify: true) }
+    /// `notify` は「止まったことを UI に伝えるか」。ユーザー操作で止めたときは
+    /// 呼び出し側がすでに知っているので false にする(通知の往復で順序が入れ替わる)。
+    func stop(notify: Bool = true) {
+        queue.async { self.stopLocked(notify: notify) }
     }
 
     /// 単発再生(音色プレビュー・タップテンポ・強弱の編集)。

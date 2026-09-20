@@ -28,17 +28,21 @@ struct NoteGlyph: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            if !subdivision.tupletNumber.isEmpty {
-                Text(subdivision.tupletNumber)
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .italic()
-                    .foregroundStyle(color)
+        // 連符の肩数字は**レイアウトに影響しない overlay** で重ねる。VStack で積むと
+        // その分だけ絵が高くなり、隣のチップと符頭の高さが揃わなくなるため。
+        // 連桁より上(y < stemTop)は必ず空いているので、そこへ置く。
+        Canvas { context, _ in draw(&context) }
+            .frame(width: width, height: 37)
+            .overlay(alignment: .top) {
+                if !subdivision.tupletNumber.isEmpty {
+                    Text(subdivision.tupletNumber)
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .italic()
+                        .foregroundStyle(color)
+                        .offset(y: -1)
+                }
             }
-            Canvas { context, _ in draw(&context) }
-                .frame(width: width, height: 37)
-        }
-        .accessibilityHidden(true)   // ラベルは呼び出し側のチップが持つ
+            .accessibilityHidden(true)   // ラベルは呼び出し側のチップが持つ
     }
 
     private func draw(_ context: inout GraphicsContext) {

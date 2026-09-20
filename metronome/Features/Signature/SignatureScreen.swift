@@ -38,9 +38,19 @@ struct SignatureScreen: View {
     private var numeratorCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text(store.numeratorCaption)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Ink.muted)
+                // 補足は見出しの右に置く。チップの下にもう 1 行置くと
+                // 「文 → ボタン → 文」の挟み込みになって読みにくい。
+                HStack(alignment: .firstTextBaseline) {
+                    Text(store.numeratorCaption)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Ink.muted)
+                    Spacer(minLength: 8)
+                    if let caption = store.compoundCaption {
+                        Text(caption)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Ink.faint)
+                    }
+                }
 
                 HStack(spacing: 8) {
                     ForEach(TimeSignature.numerators(for: store.denominator), id: \.self) { value in
@@ -57,10 +67,6 @@ struct SignatureScreen: View {
                         }
                     }
                 }
-
-                Text(store.beatCaption)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Ink.faint)
             }
         }
     }

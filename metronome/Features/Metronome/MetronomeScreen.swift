@@ -11,12 +11,8 @@ struct MetronomeScreen: View {
     var body: some View {
         VStack(spacing: 14) {
             header
-            PendulumView(isRunning: store.isRunning,
-                         beatStartedAt: store.currentBeatStartedAt,
-                         beatDuration: store.beatDuration,
-                         beat: store.step,
-                         theme: theme)
-            BeatDotsView(accents: store.accents, step: store.step, theme: theme)
+            PendulumView()
+            BeatDotsView()
             tempoCard
             presets
             HStack(spacing: 12) {
@@ -196,14 +192,19 @@ private struct ChipBackground: ViewModifier {
     }
 }
 
-/// 停止中はテーマのグラデーション、再生中は差し色を帯びたガラス。
+/// 停止中はテーマのグラデーション、再生中は色の付かない素のガラス。
+///
+/// 再生中に差し色を乗せない理由: START が「押して始める」誘目のためのボタンなのに対し、
+/// STOP は鳴っている間ずっと画面にある。同じ濃さで居座られると視線が持っていかれるので、
+/// 振り子と拍ドットに主役を譲る。`.control`(= clear + interactive)も使わない。
+/// 押下フィードバックは `PressScale` が出すので、ガラス側の反応は要らない。
 private struct PlayBackground: ViewModifier {
     let isRunning: Bool
     let theme: Theme
 
     func body(content: Content) -> some View {
         if isRunning {
-            content.liquidGlass(cornerRadius: 22, role: .accent, tint: theme.accent, interactive: true)
+            content.liquidGlass(cornerRadius: 22, role: .card)
         } else {
             content
                 .background(
