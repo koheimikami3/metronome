@@ -20,24 +20,21 @@ extension View {
     /// ガラス面。`shape` に角丸などの形をそのまま渡す。
     func liquidGlass(_ shape: some InsettableShape,
                      role: GlassRole = .card,
-                     tint: Color? = nil,
-                     interactive: Bool = false) -> some View {
-        modifier(LiquidGlass(shape: shape, role: role, tint: tint, interactive: interactive))
+                     tint: Color? = nil) -> some View {
+        modifier(LiquidGlass(shape: shape, role: role, tint: tint))
     }
 
     /// 角丸長方形のショートハンド
     func liquidGlass(cornerRadius: CGFloat,
                      role: GlassRole = .card,
-                     tint: Color? = nil,
-                     interactive: Bool = false) -> some View {
+                     tint: Color? = nil) -> some View {
         liquidGlass(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
-                    role: role, tint: tint, interactive: interactive)
+                    role: role, tint: tint)
     }
 
     func liquidGlassCapsule(role: GlassRole = .bar,
-                            tint: Color? = nil,
-                            interactive: Bool = false) -> some View {
-        liquidGlass(Capsule(), role: role, tint: tint, interactive: interactive)
+                            tint: Color? = nil) -> some View {
+        liquidGlass(Capsule(), role: role, tint: tint)
     }
 }
 
@@ -45,7 +42,6 @@ private struct LiquidGlass<S: InsettableShape>: ViewModifier {
     let shape: S
     let role: GlassRole
     let tint: Color?
-    let interactive: Bool
 
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
@@ -55,12 +51,22 @@ private struct LiquidGlass<S: InsettableShape>: ViewModifier {
         }
     }
 
+    // MARK: .interactive() は使わない
+    //
+    // iOS 26 は**近接したガラス面を 1 つの操作単位にまとめる**。まとめられると、
+    // interactive なガラスが持つジェスチャがその一群のタップを引き受け、
+    // **階層上いちばん手前のビューへ配ってしまう**。TAP と START/STOP のように
+    // 12pt しか離れていないボタンが並ぶと、STOP を押したつもりのタップが TAP に
+    // 吸われて「押しても何も起きない」ことが起きる。
+    //
+    // 押し込みのフィードバックは `PressScale` が全ボタンに付けているので、
+    // ガラス側の反応は要らない。**ここに .interactive() を戻さないこと。**
+
     @available(iOS 26.0, *)
     private var modern: Glass {
-        // control は押し込みの屈折が欲しいので .clear + interactive、それ以外は .regular
+        // control は透過の強い .clear、それ以外は .regular
         var glass: Glass = role == .control ? .clear : .regular
         if let tint { glass = glass.tint(tint) }
-        if interactive || role == .control { glass = glass.interactive() }
         return glass
     }
 }
