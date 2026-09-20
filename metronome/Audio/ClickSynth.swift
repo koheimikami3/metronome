@@ -64,16 +64,16 @@ nonisolated enum ClickSynth {
         switch voice {
         case .wood:    (0.04, 0.08, 0.10)
         case .click:   (0.03, 0.06, 0.08)
+        case .claves:  (0.035, 0.06, 0.08)
         case .tick:    (0.02, 0.035, 0.35)
+        case .mech:    (0.025, 0.045, 0.06)
+        case .bell:    (0.08, 0.30, 0.50)
         case .beep:    (0.04, 0.09, 0.12)
         case .digital: (0.035, 0.07, 0.10)
-        case .bell:    (0.08, 0.30, 0.50)
+        case .marimba: (0.07, 0.15, 0.20)
         case .rim:     (0.05, 0.10, 0.13)
         case .cow:     (0.06, 0.14, 0.24)
         case .hat:     (0.025, 0.05, 0.25)
-        case .taiko:   (0.07, 0.16, 0.22)
-        case .marimba: (0.07, 0.15, 0.20)
-        case .claves:  (0.035, 0.06, 0.08)
         }
     }
 
@@ -97,6 +97,13 @@ nonisolated enum ClickSynth {
         }
     }
 
+    /// 出す倍音の上限。**これより上は出さない。**
+    ///
+    /// 矩形波・三角波を素朴に作ると倍音がナイキスト(22.05 kHz)を超えて折り返し、
+    /// 元の音と無関係な高い音になって「妙に甲高い」音になる。倍音の合成で作り、
+    /// この周波数までで打ち切って折り返しを防ぐ。
+    private static let harmonicLimit: Double = 12000
+
     /// ソフトクリップの強さ。1.0 で無加工。
     ///
     /// ピークを 0.95 まで上げても、クリックは**山が鋭くて平均が低い**ので
@@ -106,9 +113,14 @@ nonisolated enum ClickSynth {
     /// 純音に近い音色(ベル・マリンバ・ビープ)は倍音が付くと濁るので掛けない。
     private static func drive(_ voice: Voice) -> Float {
         switch voice {
-        case .wood, .click, .tick, .hat: 3.0
-        case .rim, .cow, .digital, .claves: 2.0
-        case .beep, .bell, .marimba, .taiko: 1.0
+        // ノイズ系は折り返しが起きないので強く掛けられる
+        case .tick, .mech, .hat: 3.0
+        case .wood: 2.5
+        // 倍音で作っている波形は、掛けすぎると帯域制限した意味が無くなる
+        case .click, .rim, .cow: 1.5
+        case .claves: 1.6
+        case .digital: 1.2
+        case .beep, .bell, .marimba: 1.0
         }
     }
 
@@ -177,12 +189,21 @@ nonisolated enum ClickSynth {
                   gain: accent ? 0.7 : 0.4)
 
         case .click:
-            tone(&out, sr: sr, at: 0, f0: accent ? 2000 : 1400, f1: accent ? 1250 : 950,
+            tone(&out, sr: sr, at: 0, f0: accent ? 1300 : 900, f1: accent ? 850 : 620,
                  dur: d, gain: 1.0, wave: .square)
             // アクセントだけ上に細いピンを重ねて、音の高さではなく**質感**で差を付ける
             if accent {
-                tone(&out, sr: sr, at: 0, f0: 2600, f1: nil, dur: d * 0.4, gain: 0.45, wave: .sine)
+                tone(&out, sr: sr, at: 0, f0: 1800, f1: nil, dur: d * 0.4, gain: 0.3, wave: .sine)
             }
+
+        case .mech:
+            // 機械式メトロノームの「コッ」。撃ち出しの打撃音 + 木の胴鳴りで作る。
+            // tick(メトロ1)が電子的な刻みなのに対し、こちらは実物に寄せたもの。
+            noise(&out, sr: sr, at: 0, dur: d * 0.3, cutoff: 1800, gain: 1.0)
+            tone(&out, sr: sr, at: 0, f0: accent ? 2100 : 1750, f1: accent ? 1150 : 980,
+                 dur: d, gain: 0.9, wave: .triangle)
+            tone(&out, sr: sr, at: 0, f0: accent ? 780 : 660, f1: nil,
+                 dur: d * 0.7, gain: 0.5, wave: .sine)
 
         case .tick:
             // 機械式メトロノームそのままに、アクセントは「カチ + 鈴」。
@@ -201,13 +222,10 @@ nonisolated enum ClickSynth {
             }
 
         case .digital:
-            if accent {
-                // 2 段上げの「ピッ」。単なる高い音より、電子音では合図として通る
-                tone(&out, sr: sr, at: 0, f0: 1600, f1: nil, dur: d * 0.43, gain: 1.0, wave: .square)
-                tone(&out, sr: sr, at: d * 0.43, f0: 2400, f1: nil, dur: d * 0.57, gain: 1.0, wave: .square)
-            } else {
-                tone(&out, sr: sr, at: 0, f0: 1200, f1: nil, dur: d, gain: 1.0, wave: .square)
-            }
+            // アクセントは 1 本の上昇スイープ。高さの違う 2 音を並べると
+            // 「ピッピッ」と 2 回鳴ったように聞こえてしまう。
+            tone(&out, sr: sr, at: 0, f0: accent ? 1000 : 800, f1: accent ? 1500 : nil,
+                 dur: d, gain: 1.0, wave: .square)
 
         case .bell:
             tone(&out, sr: sr, at: 0, f0: accent ? 2640 : 1980, f1: nil, dur: d, gain: 1.0, wave: .sine)
@@ -231,11 +249,6 @@ nonisolated enum ClickSynth {
             // クローズ / オープンの差は長さだけ。刻みの粒は変えない
             noise(&out, sr: sr, at: 0, dur: d, cutoff: accent ? 7000 : 8000, gain: 1.0)
 
-        case .taiko:
-            tone(&out, sr: sr, at: 0, f0: accent ? 200 : 160, f1: accent ? 80 : 70,
-                 dur: d, gain: 1.0, wave: .sine)
-            noise(&out, sr: sr, at: 0, dur: d * 0.07, cutoff: 2000, gain: accent ? 0.35 : 0.2)
-
         case .marimba:
             tone(&out, sr: sr, at: 0, f0: accent ? 1400 : 700, f1: nil, dur: d, gain: 1.0, wave: .sine)
             // マリンバの音色を決めるのは 4 倍音。撥の硬さとして短く乗せる
@@ -243,9 +256,11 @@ nonisolated enum ClickSynth {
                  dur: d * 0.3, gain: accent ? 0.3 : 0.2, wave: .sine)
 
         case .claves:
-            tone(&out, sr: sr, at: 0, f0: accent ? 3000 : 2500, f1: nil, dur: d, gain: 1.0, wave: .sine)
+            // アクセントは**明るい側**へ振る。低い胴を足すと、弱拍より鈍く聞こえて
+            // 強弱が逆になったように感じられる。
+            tone(&out, sr: sr, at: 0, f0: accent ? 2700 : 2200, f1: nil, dur: d, gain: 1.0, wave: .sine)
             if accent {
-                tone(&out, sr: sr, at: 0, f0: 1200, f1: nil, dur: d * 0.7, gain: 0.4, wave: .sine)
+                tone(&out, sr: sr, at: 0, f0: 5400, f1: nil, dur: d * 0.3, gain: 0.25, wave: .sine)
             }
         }
     }
@@ -271,13 +286,36 @@ nonisolated enum ClickSynth {
             // f1 があれば f0 → f1 へ指数的にスイープ(WebAudio の exponentialRamp 相当)
             let frequency = f1.map { f0 * pow($0 / f0, t) } ?? f0
             phase += 2 * Double.pi * frequency / sr
-            let sample: Double = switch wave {
-            case .sine: sin(phase)
-            case .square: sin(phase) >= 0 ? 1 : -1
-            case .triangle: 2 / Double.pi * asin(sin(phase))
-            }
+            let sample = waveform(wave, phase: phase, frequency: frequency)
             let envelope = pow(endGain / Double(gain), t)
             out[index] += Float(sample * envelope) * gain
+        }
+    }
+
+    /// 倍音を `harmonicLimit` までで打ち切って合成する。
+    /// 素朴に `sin(phase) >= 0 ? 1 : -1` と書くと倍音が無限に伸び、
+    /// ナイキストを超えたぶんが折り返して耳障りな高域になる。
+    private static func waveform(_ wave: Wave, phase: Double, frequency: Double) -> Double {
+        switch wave {
+        case .sine:
+            return sin(phase)
+        case .square, .triangle:
+            var value = 0.0
+            var k = 1
+            while Double(k) * frequency < harmonicLimit {
+                let h = Double(k)
+                switch wave {
+                case .square: value += sin(h * phase) / h
+                // 三角波は 1 つおきに符号が反転し、振幅は次数の 2 乗で落ちる
+                case .triangle: value += (k % 4 == 1 ? 1 : -1) * sin(h * phase) / (h * h)
+                case .sine: break
+                }
+                k += 2
+            }
+            // 級数の係数。正規化するので厳密さは要らないが、
+            // 層どうしの比を保つため波形の振幅は ±1 前後に揃えておく。
+            return wave == .square ? value * 4 / Double.pi
+                                   : value * 8 / (Double.pi * Double.pi)
         }
     }
 
