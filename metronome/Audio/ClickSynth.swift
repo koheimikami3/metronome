@@ -66,7 +66,7 @@ nonisolated enum ClickSynth {
         case .click:   (0.024, 0.048, 0.06)
         case .claves:  (0.035, 0.06, 0.08)
         case .tick:    (0.02, 0.035, 0.35)
-        case .mech:    (0.025, 0.045, 0.06)
+        case .mech:    (0.03, 0.06, 0.08)
         case .bell:    (0.08, 0.30, 0.50)
         case .beep:    (0.04, 0.09, 0.12)
         case .digital: (0.035, 0.07, 0.10)
@@ -120,9 +120,10 @@ nonisolated enum ClickSynth {
     private static func drive(_ voice: Voice) -> Float {
         switch voice {
         // ノイズ系は折り返しが起きないので強く掛けられる
-        case .tick, .mech, .hat: 3.0
-        // wood は倍音が増えるとそのまま「甲高さ」になるので控えめに
-        case .wood: 2.0
+        case .tick, .hat: 3.0
+        // mech と wood は倍音が増えるとそのまま「甲高さ」になるので控えめに
+        case .mech: 2.7
+        case .wood: 1.7
         // 倍音で作っている波形は、掛けすぎると帯域制限した意味が無くなる。
         // click はさらに控えめ。tanh は頭を潰す = アタックを削るので、
         // 立ちを聴かせたい音では掛けすぎると鈍くなる。
@@ -195,12 +196,16 @@ nonisolated enum ClickSynth {
         case .wood:
             // 実物のウッドブロックの胴は 800〜1200 Hz あたり。ここを上に取ると
             // 木ではなく金属の「カン」に寄って甲高く聞こえる。
-            tone(&out, sr: sr, at: 0, f0: accent ? 1000 : 780, f1: accent ? 760 : 590,
+            tone(&out, sr: sr, at: 0, f0: accent ? 880 : 680, f1: accent ? 680 : 530,
                  dur: d, gain: 1.0, wave: .triangle, sweep: 0.25)
+            // 胴の上に乗る**整数比でない**鳴り。これが無いと、80 ms 続く三角波が
+            // ただの持続音に聞こえて電子的になる。短く切って「木を叩いた」側に寄せる。
+            tone(&out, sr: sr, at: 0, f0: accent ? 2380 : 1840, f1: nil,
+                 dur: d * 0.22, gain: 0.3, wave: .sine)
             // ノイズはハイパスなので、cutoff は「どれだけ高いところが残るか」。
             // 3 kHz より上だけ残すと、撥が当たる音ではなく砂のような高域になる。
-            noise(&out, sr: sr, at: 0, dur: d * 0.36, cutoff: accent ? 1600 : 1700,
-                  gain: accent ? 0.6 : 0.35)
+            noise(&out, sr: sr, at: 0, dur: d * 0.3, cutoff: accent ? 1200 : 1300,
+                  gain: accent ? 0.45 : 0.25)
 
         case .click:
             // 矩形波はやめた。帯域を絞っても中身は奇数倍音だけなので、数十 ms 伸ばすと
@@ -214,13 +219,19 @@ nonisolated enum ClickSynth {
                  dur: d, gain: 0.85, wave: .triangle, sweep: 0.15)
 
         case .mech:
-            // 機械式メトロノームの「コッ」。撃ち出しの打撃音 + 木の胴鳴りで作る。
-            // tick(メトロ2)が鈴付きの刻みなのに対し、こちらは胴の鳴りで作る。
-            noise(&out, sr: sr, at: 0, dur: d * 0.3, cutoff: 1800, gain: 1.0)
-            tone(&out, sr: sr, at: 0, f0: accent ? 2100 : 1750, f1: accent ? 1150 : 980,
-                 dur: d, gain: 0.9, wave: .triangle)
-            tone(&out, sr: sr, at: 0, f0: accent ? 780 : 660, f1: nil,
-                 dur: d * 0.7, gain: 0.5, wave: .sine)
+            // 実物の機械式メトロノームの「カチ」。中身は 2 段になっている。
+            //   1. 撃鉄がプレートに当たる数 ms の接触音(広い帯域)
+            //   2. そのあと木の箱が短く鳴る胴鳴り
+            // 箱の共鳴は整数倍にならないので、**比の合わない高さのサインを重ねる**。
+            // 倍音を積むと箱ではなく楽器の音になる。
+            noise(&out, sr: sr, at: 0, dur: d * 0.07, cutoff: accent ? 4200 : 3600, gain: 1.0)
+            noise(&out, sr: sr, at: 0, dur: d * 0.4, cutoff: 1400, gain: 0.5)
+            tone(&out, sr: sr, at: 0, f0: accent ? 1380 : 1150, f1: nil,
+                 dur: d * 0.75, gain: 0.5, wave: .sine)
+            tone(&out, sr: sr, at: 0, f0: accent ? 2260 : 1880, f1: nil,
+                 dur: d * 0.4, gain: 0.3, wave: .sine)
+            tone(&out, sr: sr, at: 0, f0: accent ? 700 : 590, f1: nil,
+                 dur: d, gain: 0.4, wave: .sine)
 
         case .tick:
             // 機械式メトロノームそのままに、アクセントは「カチ + 鈴」。
@@ -241,7 +252,9 @@ nonisolated enum ClickSynth {
         case .digital:
             // 高さを変えるだけで、スイープも 2 音の並びもしない。2 音を並べると
             // 「ピッピッ」と 2 回鳴ったように、スイープさせると音程が揺れたように聞こえる。
-            tone(&out, sr: sr, at: 0, f0: accent ? 1250 : 800, f1: nil,
+            // 強弱はオクターブ差にする。1250 : 800 のような中途半端な比だと、
+            // 同じ音の高低ではなく「音程を外した別の音」に聞こえる。
+            tone(&out, sr: sr, at: 0, f0: accent ? 1600 : 800, f1: nil,
                  dur: d, gain: 1.0, wave: .square)
 
         case .bell:
@@ -254,17 +267,25 @@ nonisolated enum ClickSynth {
             // 縁を叩いた音というより弾かれたように硬く聞こえる。
             tone(&out, sr: sr, at: 0, f0: accent ? 620 : 430, f1: 300, dur: d, gain: 1.0,
                  wave: .square, attack: accent ? 0.02 : 0)
-            // アクセントは胴が鳴っている感じを足す
-            if accent {
-                tone(&out, sr: sr, at: 0, f0: 180, f1: nil, dur: d * 0.8, gain: 0.5,
-                     wave: .sine, attack: 0.025)
-            }
+            // 以前はここに 180 Hz のサインを重ねて胴の厚みを出していたが、
+            // 620→300 のスイープと比が合わず、アクセントだけ音程を外して聞こえた。
+            // 厚みより音程が合っているほうを取る。
 
         case .cow:
-            // アクセントはオープン(減衰を伸ばす)。長さの差がそのまま開きになる
+            // 撥が当たる音。これが無いと、鳴っているのは 2 本の矩形波だけになって
+            // 叩いた音に聞こえない。
+            noise(&out, sr: sr, at: 0, dur: d * 0.05, cutoff: 3500, gain: 0.5)
+            // アクセントはオープン(減衰を伸ばす)。長さの差がそのまま開きになる。
+            // 2 本目は **時刻をずらさない**。2 ms でもずらすとフラムになり、
+            // 1 打が 2 回鳴ったように聞こえる。
             tone(&out, sr: sr, at: 0, f0: accent ? 640 : 540, f1: nil, dur: d, gain: 1.0, wave: .square)
-            tone(&out, sr: sr, at: 0.002, f0: accent ? 940 : 810, f1: nil,
-                 dur: d * 0.9, gain: 0.75, wave: .square)
+            // 比を 1.5(完全 5 度)から外す。ぴったり 5 度だと和音として聞こえて、
+            // 金属の塊ではなく電子音になる。実物のカウベルも整数比では鳴らない。
+            // 2 本目の頭だけ数 ms かけて立ち上げる。真横に重ねると 2 本の山が
+            // そのまま足し算されて波高だけ上がり、正規化で全体が下がって
+            // 音量を損する(実測で 2 dB)。時刻はずらさないのでフラムにもならない。
+            tone(&out, sr: sr, at: 0, f0: accent ? 948 : 800, f1: nil,
+                 dur: d * 0.7, gain: 0.75, wave: .square, attack: 0.06)
 
         case .hat:
             // クローズ / オープンの差は長さだけ。刻みの粒は変えない
