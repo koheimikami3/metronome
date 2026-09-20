@@ -133,14 +133,14 @@ Xcode は選んだ場所の中にもう 1 段フォルダを作るので、作�
 
 ### 提出のために置いてあるもの
 
-- **`metronome/PrivacyInfo.xcprivacy`** — Required Reason API の宣言。
-  `UserDefaults`(`CA92.1`)と `CACurrentMediaTime`(= system boot time、`35F9.1`)を
-  使っているので、無いとアップロード後に **ITMS-91053** の警告が届く。
-  収集もトラッキングもしないので、その 2 つ以外は空
-- **このファイルにはコメントを書かない。** 日本語コメントを入れた build 1 は
-  **ITMS-91056(Invalid privacy manifest)**で差し戻された。`plutil -lint` は通るので
-  手元では気付けない。**Xcode のテンプレートもコメントを `<plist>` の外にしか置いていない**
-  ので、中身は Apple のスキーマそのままに保ち、理由はこのファイル(development.md)に書く
+- **プライバシーマニフェスト(`PrivacyInfo.xcprivacy`)は置いていない。**
+  `UserDefaults` と `CACurrentMediaTime` を使うので本来は宣言したいが、
+  **置くと ITMS-91056(Invalid privacy manifest)で差し戻される**。
+  Apple のスキーマどおりの内容(`CA92.1` / `35F9.1`)で、`plutil -lint` も通り、
+  コメントの有無・アーカイブの destination も変えて build 1〜3 を試したが再現した。
+  値が不正なら ITMS-91054 / 91055 になるはずで、**原因は未特定**。
+  無い場合は `UserDefaults` について **ITMS-91053 の警告メール**が届くが、
+  これは提出をブロックしない。原因が分かったら入れ直す
 - **`ITSAppUsesNonExemptEncryption = false`**(`metronome/Info.plist`)—
   暗号化を使っていない宣言。**入れておくとアップロードのたびの輸出コンプライアンスの
   質問が出ない**

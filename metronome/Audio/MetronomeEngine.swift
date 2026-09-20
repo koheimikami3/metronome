@@ -18,7 +18,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         var beatCount: Int = 4
         /// 1 拍あたりの発音数(分割)
         var pulsesPerBeat: Int = 1
-        var voice: Voice = .wood
+        var voice: Voice = .mech
         var accents: [AccentLevel] = [.strong, .weak, .weak, .weak]
 
         /// 小節の構成が変わったか。変わったときだけ小節の頭を取り直す。

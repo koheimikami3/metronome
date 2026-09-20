@@ -72,7 +72,8 @@ final class MetronomeStore {
         }
     }
 
-    var voice: Voice = .wood {
+    /// 既定は メトロ1。一覧の先頭で、いちばんメトロノームらしい音。
+    var voice: Voice = .mech {
         didSet {
             guard voice != oldValue else { return }
             syncEngine()
