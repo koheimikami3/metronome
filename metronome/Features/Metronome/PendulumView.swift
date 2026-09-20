@@ -11,7 +11,9 @@ import SwiftUI
 struct PendulumView: View {
     @Environment(MetronomeStore.self) private var store
 
-    private static let maxAngle: Double = 16
+    /// 片側の振れ幅。実物のメトロノームの見た目に寄せて大きめに取っている。
+    private static let maxAngle: Double = 28
+    private static let armLength: CGFloat = 116
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -27,8 +29,8 @@ struct PendulumView: View {
 
             Circle()
                 .fill(Ink.pendulumPivot)
-                .frame(width: 12, height: 12)
-                .offset(y: 6)
+                .frame(width: 14, height: 14)
+                .offset(y: 7)
         }
         .frame(height: 150)
         .accessibilityHidden(true)
@@ -37,15 +39,25 @@ struct PendulumView: View {
     private func arm(angle: Double) -> some View {
         Capsule()
             .fill(Ink.pendulum)
-            .frame(width: 2, height: 116)
-            .overlay(alignment: .top) {
-                Circle()
+            .frame(width: 5, height: Self.armLength)
+            // 錘は棒の途中に横向きで乗せる。先端に玉を置くと振り子ではなく
+            // 旗に見えるうえ、アイコンの「棒だけ」の見た目からも離れる。
+            .overlay(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .fill(store.theme.deep)
-                    .frame(width: 16, height: 16)
+                    .frame(width: 30, height: 9)
                     .shadow(color: store.isRunning ? store.theme.bloom1 : .clear, radius: 6)
-                    .offset(y: -4)
+                    .offset(y: -weightOffset)
             }
             .rotationEffect(.degrees(angle), anchor: .bottom)
+    }
+
+    /// 支点から錘までの距離。**実物と同じく、錘が上にあるほど遅い。**
+    /// 目盛りではないので厳密である必要はないが、BPM と逆に動くほうが納得感がある。
+    private var weightOffset: CGFloat {
+        let span = Double(Tempo.range.upperBound - Tempo.range.lowerBound)
+        let t = (Double(store.bpm) - Double(Tempo.range.lowerBound)) / span
+        return Self.armLength * CGFloat(0.78 - 0.46 * t)
     }
 
     /// 1 拍で端から端まで渡る。到達点は拍の偶奇で入れ替わる。
