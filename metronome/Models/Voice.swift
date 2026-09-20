@@ -31,27 +31,30 @@ enum Voice: String, CaseIterable, Identifiable, Sendable {
 
     /// 設定画面のグリッドに出す SF Symbols 名。
     ///
-    /// 打楽器そのものの記号は SF Symbols に無いので、**形か仕草が近いもの**を当てている
-    /// (木のブロック = `cube`、2 本を打ち合わせるクラベス = `hands.clap`、
-    ///  上下 2 枚のシンバル = `cylinder.split.1x2`、リムの輪 = `circle.circle`)。
-    /// 鈴とカウベルは同じ鐘なので、重いカウベルを塗りつぶしで区別する。
+    /// 打楽器そのものの記号は SF Symbols に無い(シンバルもクラベスも存在しない)ので、
+    /// **形が近いもの**を当てている(木のブロック = `cube`、並んだ 2 本の木 =
+    /// `square.split.2x1`、重なった 2 枚のシンバル = `circlebadge.2`、
+    /// リムの輪 = `circle.circle`)。
+    ///
+    /// 対になっているものは**塗りつぶし無しが先**に来るように揃える
+    /// (メトロ1 / メトロ2、ベル / カウベル)。
     ///
     /// 色は付けない。`Models/` は Foundation だけに依存させる規約なので、
     /// ここで持てるのは名前の文字列まで。
     var symbolName: String {
         switch self {
-        case .mech: "metronome.fill"
-        case .tick: "metronome"
+        case .mech: "metronome"
+        case .tick: "metronome.fill"
         case .click: "cursorarrow.click"
         case .digital: "waveform.path"
         case .beep: "dot.radiowaves.right"
         case .rim: "circle.circle"
         case .wood: "cube"
-        case .claves: "hands.clap"
+        case .claves: "square.split.2x1"
         case .marimba: "pianokeys"
         case .bell: "bell"
         case .cow: "bell.fill"
-        case .hat: "cylinder.split.1x2"
+        case .hat: "circlebadge.2"
         }
     }
 }
