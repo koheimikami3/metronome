@@ -13,7 +13,7 @@ struct PendulumView: View {
 
     /// 片側の振れ幅。実物のメトロノームの見た目に寄せて大きめに取っている。
     private static let maxAngle: Double = 28
-    private static let armLength: CGFloat = 116
+    private static let armLength: CGFloat = 150
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -29,23 +29,23 @@ struct PendulumView: View {
 
             Circle()
                 .fill(Ink.pendulumPivot)
-                .frame(width: 14, height: 14)
-                .offset(y: 7)
+                .frame(width: 16, height: 16)
+                .offset(y: 8)
         }
-        .frame(height: 150)
+        .frame(height: 182)
         .accessibilityHidden(true)
     }
 
     private func arm(angle: Double) -> some View {
         Capsule()
             .fill(Ink.pendulum)
-            .frame(width: 5, height: Self.armLength)
+            .frame(width: 7, height: Self.armLength)
             // 錘は棒の途中に横向きで乗せる。先端に玉を置くと振り子ではなく
             // 旗に見えるうえ、アイコンの「棒だけ」の見た目からも離れる。
             .overlay(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
                     .fill(store.theme.deep)
-                    .frame(width: 30, height: 9)
+                    .frame(width: 36, height: 11)
                     .shadow(color: store.isRunning ? store.theme.bloom1 : .clear, radius: 6)
                     .offset(y: -weightOffset)
             }
@@ -64,7 +64,9 @@ struct PendulumView: View {
     private func angle(startedAt: TimeInterval) -> Double {
         // 拍の時刻は CACurrentMediaTime 基準で届くので、同じ時計で測る
         let elapsed = max(0, CACurrentMediaTime() - startedAt)
-        let progress = min(elapsed / max(store.beatDuration, 0.001), 1)
+        // 拍長は**その拍が始まった時点の値**。いまの BPM を使うと、
+        // 再生中にテンポを変えた瞬間に進み具合が飛んで棒がカクつく。
+        let progress = min(elapsed / max(store.currentBeatDuration, 0.001), 1)
         let target = store.step % 2 == 0 ? -Self.maxAngle : Self.maxAngle
         // 実際の振り子と同じく、端でいちばん遅くなる。
         // デザインの timing-curve(0.36, 0, 0.64, 1) にも近い。

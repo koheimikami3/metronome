@@ -8,6 +8,17 @@ struct NoteGlyph: View {
     /// 1.0 = 分割チップの寸法。文字の横に置くときは 1 未満にする。
     /// 数値を個別に持ち替えずに Canvas ごと拡大縮小するので、比率は必ず保たれる。
     var scale: CGFloat = 1
+    var align: Align = .frame
+
+    /// 縦位置をどこで揃えるか。**どちらでも音符どうしの高さは揃う**
+    /// (枠が共通なので)。違うのは絵全体が箱の中でどこに座るか。
+    enum Align {
+        /// 枠の中心。上の 11pt は肩数字のための空きなので、絵はやや下に寄り、
+        /// 肩数字とチップの上端の間に余白ができる
+        case frame
+        /// 描いた絵の中心。文字の横に並べるときはこちらでないと浮いて見える
+        case ink
+    }
 
     private var headStep: CGFloat { subdivision.dense ? 8.2 : 11.5 }
     private var headRadiusX: CGFloat { subdivision.dense ? 3.9 : 4.9 }
@@ -61,10 +72,13 @@ struct NoteGlyph: View {
                     .position(x: (beamStart + beamEnd) / 2 * scale, y: tupletCenterY * scale)
             }
         }
-        // このビューの「中心」は**枠の中心ではなく描いた絵の中心**とする。
-        // 枠の上 11pt は肩数字のための空きなので、枠のまま中央揃えすると絵だけ下にずれる。
-        // 肩数字を数に入れないのは、連符と他の分割で符頭の高さを揃えたいため。
-        .alignmentGuide(VerticalAlignment.center) { _ in (stemTop + baseline + headRadiusY) / 2 * scale }
+        .alignmentGuide(VerticalAlignment.center) { dimensions in
+            switch align {
+            case .frame: dimensions.height / 2
+            // 肩数字を数に入れないのは、連符と他の分割で符頭の高さを揃えたいため
+            case .ink: (stemTop + baseline + headRadiusY) / 2 * scale
+            }
+        }
         .accessibilityHidden(true)   // ラベルは呼び出し側が持つ
     }
 

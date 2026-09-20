@@ -52,7 +52,7 @@ struct MetronomeScreen: View {
                     Text("\(store.signatureLabel) ・")
                         .font(.system(size: 16))
                         .foregroundStyle(Ink.muted)
-                    NoteGlyph(subdivision: store.subdivision, color: Ink.muted, scale: 0.7)
+                    NoteGlyph(subdivision: store.subdivision, color: Ink.muted, scale: 0.7, align: .ink)
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(store.signatureLabel) 拍子、\(store.subdivision.label)")

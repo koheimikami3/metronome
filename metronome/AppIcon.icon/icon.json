@@ -30,6 +30,13 @@
           "name" : "Metronome-02-Body"
         }
       ],
+      "position" : {
+        "scale" : 1,
+        "translation-in-points" : [
+          0,
+          -40
+        ]
+      },
       "shadow" : {
         "kind" : "neutral",
         "opacity" : 0.5

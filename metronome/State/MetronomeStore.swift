@@ -123,6 +123,13 @@ final class MetronomeStore {
     /// 振り子はこの時刻からの経過で角度を決める。
     private(set) var currentBeatStartedAt: TimeInterval?
 
+    /// いま鳴っている拍の長さ。**拍が始まった時点の値で固定する**。
+    ///
+    /// 振り子の位相をいまの BPM から出すと、再生中にテンポを変えた瞬間に
+    /// `経過 / 拍長` が飛んで棒がカクつく。エンジン側も予約済みの次の拍は
+    /// 動かさない(新しいテンポは次の拍から効く)ので、**表示もそれに揃える**。
+    private(set) var currentBeatDuration: TimeInterval = 60.0 / 112.0
+
     /// エンジンから受け取った「これから鳴る拍」。発音時刻を過ぎたものから消化する。
     private var pendingBeats: [(beat: Int, audibleAt: TimeInterval)] = []
 
@@ -168,7 +175,7 @@ final class MetronomeStore {
 
     var tempoTerm: String { Tempo.term(bpm) }
 
-    /// 1 拍の長さ(秒)。振り子の周期に使う。
+    /// 1 拍の長さ(秒)。いまの BPM から素直に出したもの。
     var beatDuration: TimeInterval { 60.0 / Double(bpm) }
 
     var numeratorCaption: String {
@@ -285,6 +292,7 @@ final class MetronomeStore {
         // 拍数が減った直後は、古い拍番号が残っていることがある
         step = min(latest.beat, beatCount - 1)
         currentBeatStartedAt = latest.audibleAt
+        currentBeatDuration = beatDuration
     }
 
     // MARK: - エンジンへの反映
