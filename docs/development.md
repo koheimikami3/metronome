@@ -31,8 +31,6 @@ metronome/                     # ソース(metronome.xcodeproj と同階層)
 │   ├── Metronome/              # 01 メトロノーム(+ PendulumView / BeatDotsView)
 │   ├── Signature/              # 02 拍子
 │   └── Settings/               # 03 設定(+ LicenseListView / OtherAppsCard)
-├── Monetization/
-│   └── AdSlot.swift            # ★ 広告の差し込み口(初版は領域確保のみ)
 ├── Support/
 │   ├── Haptics.swift
 │   ├── DisplayLink.swift       # CADisplayLink の薄い包み

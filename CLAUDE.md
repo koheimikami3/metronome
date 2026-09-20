@@ -37,7 +37,6 @@ metronome/
 ├── State/         # MetronomeStore(@Observable)。Audio と UI の接続層
 ├── DesignSystem/  # Theme / Ink / GlassStyle / 共通ビュー
 ├── Features/      # Metronome / Signature / Settings の各画面
-├── Monetization/  # AdSlot(広告の差し込み口)
 └── Support/       # Haptics / ReviewLink
 ```
 

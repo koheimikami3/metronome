@@ -22,6 +22,17 @@ struct NoteGlyph: View {
     /// 符頭が 1 つで連桁があるものは、連桁ではなく旗として描く
     private var isSingleFlagged: Bool { subdivision.noteHeads == 1 && subdivision.beams > 0 }
 
+    /// 連桁(旗のときは符幹 + 旗)の左右端。描画と肩数字の位置で共有する。
+    private var beamStart: CGFloat { firstHeadX + headRadiusX - 1.4 }
+    private var beamEnd: CGFloat {
+        beamStart + (isSingleFlagged
+                     ? stemWidth + flagWidth
+                     : CGFloat(subdivision.noteHeads - 1) * headStep + stemWidth)
+    }
+
+    /// 肩数字の中心の高さ。連桁の上端(stemTop)より上に収まる値。
+    private let tupletCenterY: CGFloat = 4.6
+
     private var width: CGFloat {
         firstHeadX
             + CGFloat(subdivision.noteHeads - 1) * headStep
@@ -39,13 +50,15 @@ struct NoteGlyph: View {
             draw(&context)
         }
         .frame(width: width * scale, height: 37 * scale)
-        .overlay(alignment: .top) {
+        .overlay {
             if !subdivision.tupletNumber.isEmpty {
+                // 置くのは枠の中央ではなく**連桁の中央**。枠は符頭の左余白と
+                // 右へ出る符幹のぶんだけ左右非対称なので、枠で中央揃えすると左にずれる。
                 Text(subdivision.tupletNumber)
                     .font(.system(size: 9.5 * scale, weight: .semibold))
                     .italic()
                     .foregroundStyle(color)
-                    .offset(y: -1 * scale)
+                    .position(x: (beamStart + beamEnd) / 2 * scale, y: tupletCenterY * scale)
             }
         }
         // このビューの「中心」は**枠の中心ではなく描いた絵の中心**とする。
@@ -73,12 +86,9 @@ struct NoteGlyph: View {
             context.fill(stem, with: .color(color))
         }
 
-        let beamStart = firstHeadX + headRadiusX - 1.4
-        let beamEnd = firstHeadX + CGFloat(subdivision.noteHeads - 1) * headStep + headRadiusX - 1.4 + stemWidth
         for b in 0..<subdivision.beams {
-            let w = isSingleFlagged ? stemWidth + flagWidth : beamEnd - beamStart
             let beam = Path(roundedRect: CGRect(x: beamStart, y: stemTop + CGFloat(b) * 5.6,
-                                                width: w, height: 3.1),
+                                                width: beamEnd - beamStart, height: 3.1),
                             cornerRadius: 0.8)
             context.fill(beam, with: .color(color))
         }

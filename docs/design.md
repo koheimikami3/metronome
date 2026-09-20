@@ -58,17 +58,22 @@
 - 起動が落ちるかどうかは `launchctl list` では分からない(落ちてもジョブ行が残る)。
   `~/Library/Logs/DiagnosticReports/` の `.ips` を見ること
 
+## タップ領域
+
+- **`.glassEffect` は地を描くだけでタップ領域を広げない。** ガラスを付けた先が Text なら、
+  押せるのは文字の形の上だけになる。`liquidGlass` は分岐の外で `.contentShape(shape)` を
+  付けており、**これを外すと広いボタンの大半が反応しなくなる**
+- 25 以前の `LegacyGlass` は `.background` なので元から当たるが、
+  OS で当たり判定が変わらないよう同じ場所で付ける
+
 ## 見た目
 
 - **ガラス表現の分岐は `metronome/DesignSystem/GlassStyle.swift` だけ。** iOS 26 以降は
   `.glassEffect`、25 以前は Material + 手描きのリム。画面側は `.liquidGlass(role:)` で
   「形と役割」だけを渡し、`.background(...)` を直接書かない。見た目を変えるときは
   `LiquidGlass` と `LegacyGlass` の 2 か所だけを触る
-- **ガラスに `.interactive()` を付けない。** iOS 26 は近接したガラス面を 1 つの
-  操作単位にまとめ、まとめられると interactive なガラスのジェスチャがその一群の
-  タップを引き受けて**手前のビューへ配ってしまう**。12pt 差で並ぶ TAP と STOP では、
-  STOP のタップが TAP に吸われて「押しても何も起きない」になった。
-  押し込みのフィードバックは `PressScale` が全ボタンに付けている
+- **ガラスに `.interactive()` を付けない。** 押し込みのフィードバックは `PressScale` が
+  全ボタンに付けているので、ガラス側にも持たせると二重になる
 - **標準コンポーネントがあるものは自作しない。** タブバーは `TabView`。
   参照実装は自作のグラスタブバーだったが、iOS 26 の Liquid Glass・スクロール連動の
   縮小・アクセシビリティが自動で付くネイティブ挙動を優先する。
@@ -78,9 +83,11 @@
 
 ## 広告・課金(初版では実装しない)
 
-- **差し込み口は `metronome/Monetization/AdSlot.swift` の 1 か所**に閉じる。初版は高さだけ確保した
-  透明な領域で、後から `GADBannerView` に差し替える。各タブの中身へ
-  `.safeAreaInset(edge: .bottom)` で付ける
+- **初版は領域も確保しない。** 空き枠を見せても得が無いうえ、使っていない SDK を
+  積んだまま審査に出すと指摘を招きかねないので、**AdMob SDK も入れない**
+- 入れるときの差し込み口は `RootView.screen(_:)` の 1 か所。各タブの中身へ
+  `.safeAreaInset(edge: .bottom)` でバナーを足すと、スクロールする画面でも
+  中身が枠の下に隠れない
 - iOS 26 専用の `tabViewBottomAccessory` は使わない。バージョンで挙動が割れるのと、
   本来ミニプレイヤー用で 320×50 バナーの想定サイズではないため
 - **設定画面の Pro カードは初版では表示しない。** タップしても何も起きないカードを

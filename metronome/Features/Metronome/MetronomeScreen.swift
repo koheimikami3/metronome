@@ -38,7 +38,9 @@ struct MetronomeScreen: View {
     // MARK: - ヘッダー
 
     private var header: some View {
-        HStack {
+        // 速度標語のベースラインを「メトロノーム」に合わせる。HStack の既定は
+        // 中央揃えで、2 行ぶんの中央 = 見出しと副題の隙間の高さに来てしまう。
+        HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("メトロノーム")
                     .font(.system(size: 22, weight: .bold))
@@ -57,11 +59,11 @@ struct MetronomeScreen: View {
             }
             Spacer()
             Text(store.tempoTerm)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .kerning(0.5)
                 .foregroundStyle(theme.deep)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
                 .background(Capsule().fill(theme.bloom1))
         }
     }

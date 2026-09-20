@@ -123,9 +123,6 @@ final class MetronomeStore {
     /// 振り子はこの時刻からの経過で角度を決める。
     private(set) var currentBeatStartedAt: TimeInterval?
 
-    /// 広告を消す課金。初版では常に false(StoreKit に繋ぐときの差し込み口)。
-    let isPro = false
-
     /// エンジンから受け取った「これから鳴る拍」。発音時刻を過ぎたものから消化する。
     private var pendingBeats: [(beat: Int, audibleAt: TimeInterval)] = []
 
@@ -191,6 +188,7 @@ final class MetronomeStore {
     // MARK: - 操作
 
     func toggle() {
+        Diagnostics.toggle(isRunning: isRunning)
         isRunning ? stop() : start()
     }
 
@@ -244,6 +242,7 @@ final class MetronomeStore {
     private var taps: [TimeInterval] = []
 
     func tap() {
+        Diagnostics.tapTempo()
         let now = CACurrentMediaTime()
         taps = taps.filter { now - $0 < 2.4 }
         taps.append(now)
@@ -374,7 +373,7 @@ final class MetronomeStore {
         if let stored = defaults.string(forKey: Key.theme), Theme.all.contains(where: { $0.key == stored }) {
             themeKey = stored
         } else {
-            themeKey = "caramel"   // 初回起動の既定(デザインの標準色)
+            themeKey = Theme.fallback.key   // 初回起動の既定は一覧の先頭(トープ)
         }
         if let stored = defaults.object(forKey: Key.volume) as? Double {
             let clamped = min(max(stored, 0), 1)

@@ -44,6 +44,11 @@ private struct LiquidGlass<S: InsettableShape>: ViewModifier {
     let tint: Color?
 
     func body(content: Content) -> some View {
+        glass(content).contentShape(shape)
+    }
+
+    @ViewBuilder
+    private func glass(_ content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content.glassEffect(modern, in: shape)
         } else {
@@ -51,16 +56,19 @@ private struct LiquidGlass<S: InsettableShape>: ViewModifier {
         }
     }
 
-    // MARK: .interactive() は使わない
+    // MARK: .contentShape が要る理由
     //
-    // iOS 26 は**近接したガラス面を 1 つの操作単位にまとめる**。まとめられると、
-    // interactive なガラスが持つジェスチャがその一群のタップを引き受け、
-    // **階層上いちばん手前のビューへ配ってしまう**。TAP と START/STOP のように
-    // 12pt しか離れていないボタンが並ぶと、STOP を押したつもりのタップが TAP に
-    // 吸われて「押しても何も起きない」ことが起きる。
+    // `.glassEffect` は**地を描くだけでタップ領域を広げない**。付けた先が Text なら、
+    // 押せるのは文字の形の上だけになる。STOP のように広い面へ短い文字を置いたボタンは、
+    // 面積のほとんどが「押しても何も起きない」場所になってしまう。
+    // (停止中の START が必ず効いたのは、あちらが `.background` で塗っていて、
+    //  背景ビューはタップを受けるため。ガラスに差し替えた面だけが効かなくなっていた。)
     //
-    // 押し込みのフィードバックは `PressScale` が全ボタンに付けているので、
-    // ガラス側の反応は要らない。**ここに .interactive() を戻さないこと。**
+    // 25 以前の `LegacyGlass` は `.background` なので元から効くが、**両 OS で同じ
+    // 当たり判定にする**ため分岐の外で付ける。
+    //
+    // なお `.interactive()` は使わない。押し込みの反応は `PressScale` が
+    // 全ボタンに付けているので、ガラス側にも持たせると二重になる。
 
     @available(iOS 26.0, *)
     private var modern: Glass {

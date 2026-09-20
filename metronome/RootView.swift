@@ -32,13 +32,11 @@ struct RootView: View {
         .preferredColorScheme(.light)
     }
 
-    /// 各タブに共通で付ける背景と広告枠。
-    /// 広告枠を `safeAreaInset` で足すと、スクロールする画面でも
-    /// 中身が枠の下に隠れない。
+    /// 各タブに共通で付ける背景。広告を入れるときは、ここに
+    /// `.safeAreaInset(edge: .bottom)` でバナーを足す。
     private func screen<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .safeAreaInset(edge: .bottom) { AdSlot(isPro: store.isPro) }
             .background { ThemedBackground(theme: store.theme) }
     }
 }
