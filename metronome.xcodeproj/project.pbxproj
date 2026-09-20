@@ -269,11 +269,11 @@
 				DEVELOPMENT_TEAM = M5WP527J7Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "\U30e1\U30c8\U30ed\U30ce\U30fc\U30e0";
+				INFOPLIST_FILE = metronome/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "メトロノーム";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_FILE = metronome/Info.plist;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -303,11 +303,11 @@
 				DEVELOPMENT_TEAM = M5WP527J7Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "\U30e1\U30c8\U30ed\U30ce\U30fc\U30e0";
+				INFOPLIST_FILE = metronome/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "メトロノーム";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_FILE = metronome/Info.plist;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
