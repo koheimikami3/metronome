@@ -9,19 +9,25 @@ struct MetronomeScreen: View {
     private var theme: Theme { store.theme }
 
     var body: some View {
-        VStack(spacing: 14) {
-            header
-            PendulumView()
-            BeatDotsView()
-            tempoCard
-            presets
-            HStack(spacing: 12) {
-                tapButton
-                playButton
+        // 行間は画面の高さで決める。**広告の領域(100pt)を引くと iPhone SE 系は
+        // 中身に 490pt しか渡らず**、固定の部品で 419pt 使うので振り子に 71pt しか
+        // 残らない。5 か所を 2pt ずつ詰めて 10pt 返す。余裕のある機種
+        // (iPhone 17 Pro は 621pt)は 14 のまま。
+        GeometryReader { geo in
+            VStack(spacing: geo.size.height < 520 ? 12 : 14) {
+                header
+                PendulumView()
+                BeatDotsView()
+                tempoCard
+                presets
+                HStack(spacing: 12) {
+                    tapButton
+                    playButton
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
         .alert("テンポ", isPresented: $isEditingBpm) {
             TextField("BPM", text: $bpmInput)
                 .keyboardType(.numberPad)

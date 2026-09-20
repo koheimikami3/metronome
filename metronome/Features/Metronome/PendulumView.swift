@@ -34,9 +34,10 @@ struct PendulumView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
-        // この画面で伸び縮みするのはここだけ(他は合計 419pt の固定高)なので、
+        // この画面で伸び縮みするのはここだけ(他はほぼ固定高)なので、
         // **バナーの領域はここが吸う**。実測(領域 100pt 込み): iPhone 17 Pro
-        // 202pt / iPhone SE(第3世代)71pt。下限 60 はその下を通らないための保険。
+        // 202pt / iPhone SE(第3世代)81pt(SE は行間を 12 に詰めて +10pt)。
+        // 下限 60 はその下を通らないための保険。
         .frame(minHeight: 60, maxHeight: 260)
         .accessibilityHidden(true)
     }
