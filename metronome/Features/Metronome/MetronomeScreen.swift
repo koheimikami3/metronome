@@ -1,0 +1,235 @@
+import SwiftUI
+
+/// 01 — メトロノーム
+struct MetronomeScreen: View {
+    @Environment(MetronomeStore.self) private var store
+    @State private var isEditingBpm = false
+    @State private var bpmInput = ""
+
+    private var theme: Theme { store.theme }
+
+    var body: some View {
+        // 行間は画面の高さで決める。**広告の領域(100pt)を引くと iPhone SE 系は
+        // 中身に 498pt しか渡らず**、固定の部品で 419pt 使うので振り子が 79pt まで
+        // 縮む。5 か所を 2pt ずつ詰めて 10pt 返す。広告が無ければ SE でも 598pt
+        // 渡るので、そのときは詰めずに 14 のまま。
+        GeometryReader { geo in
+            VStack(spacing: geo.size.height < 520 ? 12 : 14) {
+                header
+                PendulumView()
+                BeatDotsView()
+                tempoCard
+                presets
+                HStack(spacing: 12) {
+                    tapButton
+                    playButton
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+        }
+        .alert("テンポ", isPresented: $isEditingBpm) {
+            TextField("BPM", text: $bpmInput)
+                .keyboardType(.numberPad)
+            Button("キャンセル", role: .cancel) {}
+            Button("決定") {
+                if let value = Int(bpmInput) { store.setBpm(value) }
+            }
+        } message: {
+            Text("\(Tempo.range.lowerBound)〜\(Tempo.range.upperBound) の範囲で入力してください")
+        }
+    }
+
+    // MARK: - ヘッダー
+
+    private var header: some View {
+        // 速度標語のベースラインを「メトロノーム」に合わせる。HStack の既定は
+        // 中央揃えで、2 行ぶんの中央 = 見出しと副題の隙間の高さに来てしまう。
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("メトロノーム")
+                    .font(.system(size: 22, weight: .bold))
+                    .kerning(-0.4)
+                    .foregroundStyle(Ink.primary)
+                // 分割は「8分」と書くより音符の絵のほうが早く読める。
+                // 拍子画面のチップと同じ絵なので、どれを選んでいるかが一目で繋がる。
+                HStack(spacing: 6) {
+                    Text("\(store.signatureLabel) ・")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Ink.muted)
+                    NoteGlyph(subdivision: store.subdivision, color: Ink.muted, scale: 0.7, align: .ink)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(store.signatureLabel) 拍子、\(store.subdivision.label)")
+            }
+            Spacer()
+            Text(store.tempoTerm)
+                .font(.system(size: 14, weight: .semibold))
+                .kerning(0.5)
+                .foregroundStyle(theme.deep)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(theme.bloom1))
+        }
+    }
+
+    // MARK: - テンポ
+
+    private var tempoCard: some View {
+        @Bindable var store = store
+
+        return GlassCard(radius: 28, padding: 18) {
+            VStack(spacing: 14) {
+                HStack {
+                    stepper("−", delta: -1, label: "テンポを下げる")
+                    Spacer()
+                    bpmReadout
+                    Spacer()
+                    stepper("＋", delta: 1, label: "テンポを上げる")
+                }
+                TrackSlider(
+                    value: Binding(get: { Double(store.bpm) },
+                                   set: { store.setBpm(Int($0.rounded())) }),
+                    range: Tempo.sliderRange,
+                    label: "テンポ",
+                    valueText: { "\(Int($0)) BPM" },
+                    fill: LinearGradient(colors: [theme.light, theme.accent],
+                                         startPoint: .leading, endPoint: .trailing)
+                )
+            }
+        }
+    }
+
+    /// 数字をタップすると直接入力できる。スライダーは 40–240 までしか届かないので、
+    /// 30–280 の端に行く手段がステッパーだけになってしまうため。
+    private var bpmReadout: some View {
+        Button {
+            bpmInput = "\(store.bpm)"
+            isEditingBpm = true
+        } label: {
+            VStack(spacing: -2) {
+                Text("\(store.bpm)")
+                    .font(.system(size: 64, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(Ink.primary)
+                Text("BPM")
+                    .font(.system(size: 11, weight: .semibold))
+                    .kerning(1.6)
+                    .foregroundStyle(Ink.muted)
+            }
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel("テンポ \(store.bpm) BPM。タップで直接入力")
+    }
+
+    private func stepper(_ glyph: String, delta: Int, label: String) -> some View {
+        Button {
+            store.nudgeBpm(delta)
+        } label: {
+            Text(glyph)
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(Ink.secondary)
+                .frame(width: 52, height: 52)
+                .background(Circle().fill(Ink.inertFill))
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel(label)
+    }
+
+    private var presets: some View {
+        HStack(spacing: 8) {
+            ForEach(Tempo.presets, id: \.self) { value in
+                let isSelected = store.bpm == value
+                Button {
+                    store.setBpm(value)
+                    Haptics.soft()
+                } label: {
+                    Text("\(value)")
+                        .font(.system(size: 14, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundStyle(isSelected ? .white : Ink.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 38)
+                        .modifier(ChipBackground(isSelected: isSelected, theme: theme))
+                }
+                .buttonStyle(PressScale())
+                .accessibilityLabel("\(value) BPM")
+                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+            }
+        }
+    }
+
+    // MARK: - 操作
+
+    private var tapButton: some View {
+        Button {
+            store.tap()
+        } label: {
+            Text("TAP")
+                .font(.system(size: 15, weight: .semibold))
+                .kerning(1.2)
+                .foregroundStyle(Ink.secondary)
+                .frame(width: 96, height: 62)
+                .liquidGlass(cornerRadius: 22, role: .control)
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel("タップテンポ")
+    }
+
+    private var playButton: some View {
+        Button {
+            store.toggle()
+        } label: {
+            Text(store.isRunning ? "STOP" : "START")
+                .font(.system(size: 19, weight: .bold))
+                .kerning(1.5)
+                .foregroundStyle(store.isRunning ? Ink.primary : .white)
+                .frame(maxWidth: .infinity, minHeight: 62)
+                .modifier(PlayBackground(isRunning: store.isRunning, theme: theme))
+        }
+        .buttonStyle(PressScale())
+    }
+}
+
+// MARK: - 選択状態で地が変わる面
+
+/// 選択中はテーマの濃い色で塗り、非選択時はガラスにする。
+private struct ChipBackground: ViewModifier {
+    let isSelected: Bool
+    let theme: Theme
+
+    func body(content: Content) -> some View {
+        if isSelected {
+            content.background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(theme.deep))
+        } else {
+            content.liquidGlass(cornerRadius: 13, role: .control)
+        }
+    }
+}
+
+/// 停止中はテーマのグラデーション、再生中は色の付かない素のガラス。
+///
+/// 再生中に差し色を乗せない理由: START が「押して始める」誘目のためのボタンなのに対し、
+/// STOP は鳴っている間ずっと画面にある。同じ濃さで居座られると視線が持っていかれるので、
+/// 振り子と拍ドットに主役を譲る。
+private struct PlayBackground: ViewModifier {
+    let isRunning: Bool
+    let theme: Theme
+
+    func body(content: Content) -> some View {
+        if isRunning {
+            content.liquidGlass(cornerRadius: 22, role: .card)
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(LinearGradient(colors: [theme.light, theme.deep],
+                                             startPoint: .top, endPoint: .bottom))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(theme.deep, lineWidth: 0.5)
+                )
+                .shadow(color: theme.bloom1, radius: 14, y: 8)
+        }
+    }
+}
