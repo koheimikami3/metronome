@@ -260,7 +260,12 @@ final class MetronomeStore {
 
     func selectVoice(_ newVoice: Voice) {
         voice = newVoice
-        engine.preview(newVoice, level: .strong)
+        // 鳴っている最中は試聴しない。試聴は予約列と別に**その場で**鳴るので、
+        // 拍と拍の間に余分なアクセントが挟まり、強弱の順番が崩れて聞こえる。
+        // 新しい音色は次の拍から鳴るので、聴くのに困らない。
+        if !isRunning {
+            engine.preview(newVoice, level: .strong)
+        }
         Haptics.soft()
     }
 

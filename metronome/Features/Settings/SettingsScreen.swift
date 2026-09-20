@@ -59,9 +59,12 @@ struct SettingsScreen: View {
                         store.selectVoice(voice)
                     } label: {
                         VStack(spacing: 6) {
-                            Circle()
-                                .fill(isSelected ? theme.deep : Color(hex: "B5ABA0"))
-                                .frame(width: 14, height: 14)
+                            // 記号の実寸は字によって違うので、枠を決めて揃える。
+                            // 揃えないと下のラベルの高さがチップごとにずれる。
+                            Image(systemName: voice.symbolName)
+                                .font(.system(size: 16, weight: .medium))
+                                .frame(height: 18)
+                                .foregroundStyle(isSelected ? theme.deep : Ink.faint)
                             Text(voice.label)
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(isSelected ? theme.deep : Ink.secondary)
