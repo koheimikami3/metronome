@@ -67,6 +67,9 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private var pulseIndex = 0
     private var clickPlayerCursor = 0
     private var accentPlayerCursor = 0
+    /// ミキサーに掛けている音量。**エンジンを動かし直すたびに入れ直す**。
+    /// 止まっているノードへの設定は、起動時に取りこぼされることがある。
+    private var volume: Float = 1
     /// 割り込み前に鳴っていたか。復帰の判断に使う。
     private var wasRunningBeforeInterruption = false
 
@@ -102,6 +105,13 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
         configureSession()
         observeSession()
+        // 起動直後の 1 音のために、ここでオーディオグラフを回し始める。
+        // 止まったところから動かすと出力ルートの用意に時間がかかり、
+        // **最初の 1 音だけ遅れたり小さくなったり**する。加えて `tick()` は
+        // `lastRenderTime` が取れるまで何もしないので、初回の START は
+        // さらにタイマー 1〜2 回ぶん待たされる。先に空回ししておけば両方揃う。
+        // `.mixWithOthers` なので、鳴らしていない間に他アプリの音は邪魔しない。
+        queue.async { self.ensureEngineRunning() }
     }
 
     private static func key(_ voice: Voice, _ level: ClickSynth.Level) -> String {
@@ -169,7 +179,10 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     }
 
     func setVolume(_ volume: Float) {
-        queue.async { self.mixer.outputVolume = volume }
+        queue.async {
+            self.volume = volume
+            self.mixer.outputVolume = volume
+        }
     }
 
     func start() {
@@ -198,6 +211,8 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         if !engine.isRunning {
             engine.prepare()
             try? engine.start()
+            // 起動のたびに入れ直す(理由は `volume` のコメント)
+            mixer.outputVolume = volume
         }
         for player in clickPlayers + accentPlayers + [previewPlayer] where !player.isPlaying {
             player.play()
