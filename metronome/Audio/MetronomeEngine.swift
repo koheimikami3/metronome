@@ -240,15 +240,40 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     /// 初回の START はさらにタイマー 1〜2 回ぶん待たされる。
     /// `.mixWithOthers` なので、空回ししていても他アプリの音は邪魔しない。
     private func ensureEngineRunning() {
+        var restarted = false
         if !engine.isRunning {
             engine.prepare()
-            try? engine.start()
+            do {
+                try engine.start()
+            } catch {
+                // 背面ではセッションが渡っておらず起動に失敗しうる。
+                // 前面に戻れば onBecameActive からもう一度呼ばれるので、
+                // ここでは何もせずに引き下がる(鳴らないまま予約だけ進めない)。
+                return
+            }
+            restarted = true
             // 起動のたびに入れ直す(理由は `volume` のコメント)
             mixer.outputVolume = volume
         }
-        for player in clickPlayers + accentPlayers + [previewPlayer] where !player.isPlaying {
+
+        guard restarted else {
+            for player in clickPlayers + accentPlayers + [previewPlayer] where !player.isPlaying {
+                player.play()
+            }
+            return
+        }
+
+        // **engine を動かし直したらプレイヤーの時計を張り直す。**
+        // `isPlaying` は engine.stop() のあとも true を返すので、これを見て
+        // play() を省くと前の走行の対応が残り、`playerTime(forNodeTime:)` が
+        // ずれた時刻を返す。予約が遥か先へ飛んで、**拍だけ進んで無音**になる
+        // (起動 → 背面 → 前面 → START で実際に起きていた)。
+        for player in clickPlayers + accentPlayers + [previewPlayer] {
+            player.stop()
             player.play()
         }
+        // ノード時間も 0 から数え直しになる。次の tick で基準を取り直す。
+        hasAnchor = false
     }
 
     private func startLocked() {
