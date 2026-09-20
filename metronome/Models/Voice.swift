@@ -4,26 +4,26 @@ import Foundation
 /// rawValue は UserDefaults に保存するので、**値を変えると設定が飛ぶ**
 /// (並び順を変えるのは安全。設定画面のグリッドは `allCases` の順に並ぶ)。
 enum Voice: String, CaseIterable, Identifiable, Sendable {
-    case wood, click, claves
-    case tick, mech, bell
-    case beep, digital, marimba
-    case rim, cow, hat
+    case mech, tick, click
+    case digital, beep, rim
+    case wood, claves, marimba
+    case bell, cow, hat
 
     var id: String { rawValue }
 
     /// 設定画面のグリッドは 3 列なので、**4 文字以内**に収める。
     var label: String {
         switch self {
-        case .wood: "ウッド"
+        case .mech: "メトロ1"
+        case .tick: "メトロ2"
         case .click: "クリック"
-        case .claves: "クラベス"
-        case .tick: "メトロ1"
-        case .mech: "メトロ2"
-        case .bell: "ベル"
-        case .beep: "ビープ"
         case .digital: "デジタル"
-        case .marimba: "マリンバ"
+        case .beep: "ビープ"
         case .rim: "リム"
+        case .wood: "ウッド"
+        case .claves: "クラベス"
+        case .marimba: "マリンバ"
+        case .bell: "ベル"
         case .cow: "カウベル"
         case .hat: "ハット"
         }
@@ -31,27 +31,27 @@ enum Voice: String, CaseIterable, Identifiable, Sendable {
 
     /// 設定画面のグリッドに出す SF Symbols 名。
     ///
-    /// 打楽器そのものの記号は SF Symbols に無いので、**形が近いもの**を当てている
-    /// (ウッドブロックのスリット = `square.split.2x1`、2 本のクラベス = `equal`、
-    ///  リムの輪 = `circle.circle`、シンバルのざらつき = `circle.dotted`)。
+    /// 打楽器そのものの記号は SF Symbols に無いので、**形か仕草が近いもの**を当てている
+    /// (木のブロック = `cube`、2 本を打ち合わせるクラベス = `hands.clap`、
+    ///  上下 2 枚のシンバル = `cylinder.split.1x2`、リムの輪 = `circle.circle`)。
     /// 鈴とカウベルは同じ鐘なので、重いカウベルを塗りつぶしで区別する。
     ///
     /// 色は付けない。`Models/` は Foundation だけに依存させる規約なので、
     /// ここで持てるのは名前の文字列まで。
     var symbolName: String {
         switch self {
-        case .wood: "square.split.2x1"
-        case .click: "cursorarrow.click"
-        case .claves: "equal"
-        case .tick: "metronome"
         case .mech: "metronome.fill"
-        case .bell: "bell"
-        case .beep: "dot.radiowaves.right"
+        case .tick: "metronome"
+        case .click: "cursorarrow.click"
         case .digital: "waveform.path"
-        case .marimba: "pianokeys"
+        case .beep: "dot.radiowaves.right"
         case .rim: "circle.circle"
+        case .wood: "cube"
+        case .claves: "hands.clap"
+        case .marimba: "pianokeys"
+        case .bell: "bell"
         case .cow: "bell.fill"
-        case .hat: "circle.dotted"
+        case .hat: "cylinder.split.1x2"
         }
     }
 }
