@@ -63,7 +63,7 @@ nonisolated enum ClickSynth {
     private static func durations(_ voice: Voice) -> (soft: Double, weak: Double, accent: Double) {
         switch voice {
         case .wood:    (0.04, 0.08, 0.10)
-        case .click:   (0.03, 0.06, 0.08)
+        case .click:   (0.02, 0.04, 0.05)
         case .claves:  (0.035, 0.06, 0.08)
         case .tick:    (0.02, 0.035, 0.35)
         case .mech:    (0.025, 0.045, 0.06)
@@ -91,7 +91,8 @@ nonisolated enum ClickSynth {
     /// うるさく聞こえるので、そのぶんだけ下げる。1.0 は無補正。
     private static func trim(_ voice: Voice) -> Float {
         switch voice {
-        case .click, .digital: 0.90
+        // click は矩形波をやめたので補正が要らなくなった
+        case .digital: 0.90
         case .rim, .cow: 0.85
         default: 1.0
         }
@@ -122,7 +123,8 @@ nonisolated enum ClickSynth {
         case .tick, .mech, .hat: 3.0
         case .wood: 2.5
         // 倍音で作っている波形は、掛けすぎると帯域制限した意味が無くなる
-        case .click, .rim, .cow: 1.5
+        case .click: 2.0
+        case .rim, .cow: 1.5
         case .claves: 1.6
         case .digital: 1.2
         case .beep, .bell, .marimba: 1.0
@@ -194,12 +196,13 @@ nonisolated enum ClickSynth {
                   gain: accent ? 0.7 : 0.4)
 
         case .click:
-            tone(&out, sr: sr, at: 0, f0: accent ? 1400 : 1000, f1: accent ? 1000 : 720,
-                 dur: d, gain: 1.0, wave: .square, sweep: 0.2)
-            // アクセントだけ上に細いピンを重ねて、音の高さではなく**質感**で差を付ける
-            if accent {
-                tone(&out, sr: sr, at: 0, f0: 1800, f1: nil, dur: d * 0.4, gain: 0.3, wave: .sine)
-            }
+            // 矩形波はやめた。帯域を絞っても中身は奇数倍音だけなので、数十 ms 伸ばすと
+            // 「カチ」ではなく空洞のあるブザーに聞こえる。実物のクリックに近い
+            // 「ごく短い打撃 + すぐ落ちる胴」で組み直している。
+            noise(&out, sr: sr, at: 0, dur: d * 0.07, cutoff: accent ? 5500 : 4500,
+                  gain: accent ? 0.45 : 0.4)
+            tone(&out, sr: sr, at: 0, f0: accent ? 1650 : 1150, f1: accent ? 1350 : 950,
+                 dur: d, gain: 1.0, wave: .triangle, sweep: 0.15)
 
         case .mech:
             // 機械式メトロノームの「コッ」。撃ち出しの打撃音 + 木の胴鳴りで作る。
