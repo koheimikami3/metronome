@@ -18,12 +18,16 @@ App Store の「このバージョンの新機能」に掲載した文面を、�
 
 ---
 
-## 1.0.0 (build 3)
+## 1.0.0 (build 4)
 
 初版。リリースノートの入力欄が無いため空。
 
-build 1 / build 2 は提出後に **ITMS-91056(プライバシーマニフェストが不正)**で
+build 1〜3 は提出後に **ITMS-91056(プライバシーマニフェストが不正)**で
 差し戻されたため欠番(番号は再利用できない)。
 
 - build 1 — `PrivacyInfo.xcprivacy` に XML コメントを入れていた
 - build 2 — コメントを外したが同じエラー。**コメントは原因ではなかった**
+- build 3 — destination を Any iOS Device にして取り直したが同じエラー。
+  アーカイブは 1 / 2 とも `iPhoneOS` / arm64 で正しく、**これも原因ではなかった**
+- build 4 — **`PrivacyInfo.xcprivacy` 自体を削除**。無くても提出は通る
+  (`UserDefaults` について ITMS-91053 の警告メールが届くが、提出は止まらない)
