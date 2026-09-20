@@ -9,8 +9,6 @@ struct MetronomeScreen: View {
     private var theme: Theme { store.theme }
 
     var body: some View {
-        @Bindable var store = store
-
         VStack(spacing: 14) {
             header
             PendulumView(isRunning: store.isRunning,

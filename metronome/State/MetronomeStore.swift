@@ -125,7 +125,12 @@ final class MetronomeStore {
         load()
         engine.setHandlers(
             onBeat: { [weak self] beat, audibleAt in
-                self?.pendingBeats.append((beat, audibleAt))
+                guard let self else { return }
+                // バックグラウンドでは CADisplayLink が止まるので、消化されない拍が
+                // 溜まり続ける。鳴り終わって 1 秒以上経ったものは捨てる。
+                let cutoff = CACurrentMediaTime() - 1
+                pendingBeats.removeAll { $0.audibleAt < cutoff }
+                pendingBeats.append((beat, audibleAt))
             },
             onStop: { [weak self] in
                 self?.handleEngineStopped()
