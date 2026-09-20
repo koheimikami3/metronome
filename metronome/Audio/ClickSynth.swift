@@ -215,7 +215,7 @@ nonisolated enum ClickSynth {
 
         case .mech:
             // 機械式メトロノームの「コッ」。撃ち出しの打撃音 + 木の胴鳴りで作る。
-            // tick(メトロ1)が電子的な刻みなのに対し、こちらは実物に寄せたもの。
+            // tick(メトロ2)が鈴付きの刻みなのに対し、こちらは胴の鳴りで作る。
             noise(&out, sr: sr, at: 0, dur: d * 0.3, cutoff: 1800, gain: 1.0)
             tone(&out, sr: sr, at: 0, f0: accent ? 2100 : 1750, f1: accent ? 1150 : 980,
                  dur: d, gain: 0.9, wave: .triangle)
