@@ -27,7 +27,7 @@ struct SignatureScreen: View {
                 .foregroundStyle(Ink.primary)
             Spacer()
             Text(store.signatureLabel)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(theme.deep)
         }

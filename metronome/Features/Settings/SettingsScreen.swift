@@ -87,7 +87,9 @@ struct SettingsScreen: View {
     // MARK: - テーマ
 
     private var themeCard: some View {
-        GlassCard(padding: 10) {
+        // 内側の余白はクリック音カードと同じ 12。丸が縁に近いと窮屈に見えるうえ、
+        // 選択中の丸は外側に 4pt はみ出すリングを持つので、その逃げも要る。
+        GlassCard(padding: 12) {
             VStack(spacing: 10) {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5), spacing: 12) {
                     ForEach(Theme.all) { candidate in

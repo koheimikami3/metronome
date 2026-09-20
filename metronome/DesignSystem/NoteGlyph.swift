@@ -5,6 +5,9 @@ import SwiftUI
 struct NoteGlyph: View {
     let subdivision: Subdivision
     var color: Color = Ink.primary
+    /// 1.0 = 分割チップの寸法。文字の横に置くときは 1 未満にする。
+    /// 数値を個別に持ち替えずに Canvas ごと拡大縮小するので、比率は必ず保たれる。
+    var scale: CGFloat = 1
 
     private var headStep: CGFloat { subdivision.dense ? 8.2 : 11.5 }
     private var headRadiusX: CGFloat { subdivision.dense ? 3.9 : 4.9 }
@@ -31,18 +34,24 @@ struct NoteGlyph: View {
         // 連符の肩数字は**レイアウトに影響しない overlay** で重ねる。VStack で積むと
         // その分だけ絵が高くなり、隣のチップと符頭の高さが揃わなくなるため。
         // 連桁より上(y < stemTop)は必ず空いているので、そこへ置く。
-        Canvas { context, _ in draw(&context) }
-            .frame(width: width, height: 37)
-            .overlay(alignment: .top) {
-                if !subdivision.tupletNumber.isEmpty {
-                    Text(subdivision.tupletNumber)
-                        .font(.system(size: 9.5, weight: .semibold))
-                        .italic()
-                        .foregroundStyle(color)
-                        .offset(y: -1)
-                }
+        Canvas { context, _ in
+            context.scaleBy(x: scale, y: scale)
+            draw(&context)
+        }
+        .frame(width: width * scale, height: 37 * scale)
+        .overlay(alignment: .top) {
+            if !subdivision.tupletNumber.isEmpty {
+                Text(subdivision.tupletNumber)
+                    .font(.system(size: 9.5 * scale, weight: .semibold))
+                    .italic()
+                    .foregroundStyle(color)
+                    .offset(y: -1 * scale)
             }
-            .accessibilityHidden(true)   // ラベルは呼び出し側のチップが持つ
+        }
+        // 文字と並べたときに符頭が文字のベースラインに乗るようにする。
+        // 絵の上端 11pt は肩数字のための空きなので、素直に中央で揃えると沈んで見える。
+        .alignmentGuide(.firstTextBaseline) { _ in (baseline + headRadiusY) * scale }
+        .accessibilityHidden(true)   // ラベルは呼び出し側が持つ
     }
 
     private func draw(_ context: inout GraphicsContext) {
