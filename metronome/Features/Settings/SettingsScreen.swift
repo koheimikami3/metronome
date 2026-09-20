@@ -27,7 +27,6 @@ struct SettingsScreen: View {
 
                 SectionLabel(text: "テーマ").padding(.top, 20)
                 themeCard.padding(.top, 8)
-                volumeCard.padding(.top, 14)
 
                 if ReviewLink.writeReviewURL != nil {
                     SectionLabel(text: "サポート").padding(.top, 20)
@@ -48,41 +47,76 @@ struct SettingsScreen: View {
         }
     }
 
-    // MARK: - クリック音(選ぶとその場で鳴る)
+    // MARK: - クリック音(選ぶとその場で鳴る)+ 音量
 
+    /// 音量のスライダーは**音色と同じカードの下段**に入れている。
+    /// 変えるのはクリック音の大きさなので、「クリック音」の見出しの内側に
+    /// あるほうが読み筋に合う(別カードにしてテーマの下に置くと、
+    /// テーマの設定のように見える)。
     private var voiceCard: some View {
-        GlassCard(padding: 12) {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                ForEach(Voice.allCases) { voice in
-                    let isSelected = store.voice == voice
-                    Button {
-                        store.selectVoice(voice)
-                    } label: {
-                        VStack(spacing: 6) {
-                            // 記号の実寸は字によって違うので、枠を決めて揃える。
-                            // 揃えないと下のラベルの高さがチップごとにずれる。
-                            Image(systemName: voice.symbolName)
-                                .font(.system(size: 16, weight: .medium))
-                                .frame(height: 18)
-                                .foregroundStyle(isSelected ? theme.deep : Ink.faint)
-                            Text(voice.label)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(isSelected ? theme.deep : Ink.secondary)
+        @Bindable var store = store
+
+        return GlassCard(padding: 12) {
+            VStack(spacing: 12) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    ForEach(Voice.allCases) { voice in
+                        let isSelected = store.voice == voice
+                        Button {
+                            store.selectVoice(voice)
+                        } label: {
+                            VStack(spacing: 6) {
+                                // 記号の実寸は字によって違うので、枠を決めて揃える。
+                                // 揃えないと下のラベルの高さがチップごとにずれる。
+                                Image(systemName: voice.symbolName)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .frame(height: 18)
+                                    .foregroundStyle(isSelected ? theme.deep : Ink.faint)
+                                Text(voice.label)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(isSelected ? theme.deep : Ink.secondary)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(isSelected ? AnyShapeStyle(theme.bloom1) : AnyShapeStyle(Ink.inertFill))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(isSelected ? theme.accent : .clear, lineWidth: 1)
+                            )
                         }
-                        .frame(maxWidth: .infinity, minHeight: 54)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(isSelected ? AnyShapeStyle(theme.bloom1) : AnyShapeStyle(Ink.inertFill))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .strokeBorder(isSelected ? theme.accent : .clear, lineWidth: 1)
-                        )
+                        .buttonStyle(PressScale())
+                        .accessibilityLabel(voice.label)
+                        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                     }
-                    .buttonStyle(PressScale())
-                    .accessibilityLabel(voice.label)
-                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                 }
+
+                // 音色のグリッドと地続きに見えないよう 1 本だけ仕切る。
+                // 罫線はカードの内側いっぱいに引く(SettingRow と違って
+                // 左にアイコンの列が無いため、字下げする理由が無い)。
+                Hairline(leading: 0)
+
+                HStack(spacing: 14) {
+                    Text("音量")
+                        .font(.system(size: 15))
+                        .kerning(-0.2)
+                        .foregroundStyle(Ink.primary)
+                    // 幅は固定しない。つまみは端で半分はみ出すので、
+                    // カードの内側余白 12 がその逃げになる。
+                    TrackSlider(
+                        value: $store.volume,
+                        range: 0...1,
+                        step: 0.05,
+                        label: "音量",
+                        valueText: { "\(Int(($0 * 100).rounded()))%" },
+                        height: 8,
+                        knob: 20,
+                        fill: LinearGradient(colors: [theme.accent, theme.accent],
+                                             startPoint: .leading, endPoint: .trailing)
+                    )
+                }
+                .padding(.horizontal, 4)
+                .padding(.bottom, 2)
             }
         }
     }
@@ -117,36 +151,6 @@ struct SettingsScreen: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(theme.deep)
             }
-        }
-    }
-
-    // MARK: - 音量
-
-    private var volumeCard: some View {
-        @Bindable var store = store
-
-        return GlassCard(radius: 22, padding: 0) {
-            HStack(spacing: 16) {
-                Text("音量")
-                    .font(.system(size: 16))
-                    .kerning(-0.2)
-                    .foregroundStyle(Ink.primary)
-                Spacer()
-                TrackSlider(
-                    value: $store.volume,
-                    range: 0...1,
-                    step: 0.05,
-                    label: "音量",
-                    valueText: { "\(Int(($0 * 100).rounded()))%" },
-                    height: 8,
-                    knob: 20,
-                    fill: LinearGradient(colors: [theme.accent, theme.accent],
-                                         startPoint: .leading, endPoint: .trailing)
-                )
-                .frame(width: 200)
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 13)
         }
     }
 
