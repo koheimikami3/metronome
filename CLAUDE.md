@@ -14,6 +14,7 @@ iPhone 向けメトロノームアプリ。SwiftUI + Liquid Glass ベース。
   追記するときは同ファイル冒頭の「書き方」に従い、溜め込まない
 - ディレクトリ構成・Xcode 設定・コマンド・タイミング検証手順: `docs/development.md`
 - ストアに掲載したリリースノートの控え: `docs/release-notes.md`(提出のたびに追記)
+- リリース作業(`/release`)が読むアプリ固有の設定: `docs/release.md`(常時は読み込まない)
 - UI の詳細(レイアウト・配色・寸法)は実装済みアプリと
   `metronome/DesignSystem/Theme.swift` / `Ink.swift` のトークンが正基準
 
