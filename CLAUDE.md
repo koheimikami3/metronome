@@ -22,7 +22,7 @@ iPhone 向けメトロノームアプリ。SwiftUI + Liquid Glass ベース。
 
 - Swift / SwiftUI、iOS 17.0 以降、iPhone 縦向きのみ、ライトモード固定
 - 音は AVAudioEngine + `AVAudioTime(sampleTime:)` による先読みスケジューリング
-- 外部依存パッケージなし(初版)
+- 外部依存パッケージは GoogleMobileAds(SPM)だけ
 - 状態管理は `@Observable`(iOS 17)。`ObservableObject` + `@Published` は使わない
 - iOS 26 以降と 25 以前の両対応。**ガラス表現の分岐は `DesignSystem/GlassStyle.swift`
   の 1 か所だけ**
@@ -38,7 +38,7 @@ metronome/
 ├── State/         # MetronomeStore(@Observable)。Audio と UI の接続層
 ├── DesignSystem/  # Theme / Ink / GlassStyle / 共通ビュー
 ├── Features/      # Metronome / Signature / Settings の各画面
-└── Support/       # Haptics / ReviewLink
+└── Support/       # Haptics / ReviewLink / Ads(AdMob バナーと ATT)
 ```
 
 ### 規約
