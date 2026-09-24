@@ -9,10 +9,12 @@ enum Tab: Hashable {
 /// **広告を出すときだけ空ける。** 出さないとき(将来 Pro を買ったとき)は
 /// 画面いっぱいを使い、メトロノーム画面の振り子もその高さまで伸びる。
 ///
-/// 内訳はデザイン(参照実装の `AdBar`)どおり。バナーをそのまま置くのではなく
-/// **ガラスの面に載せてタブバーとの間を空ける**ので、その余白まで含めて空ける。
-/// デザインにある「AD」ラベルと「消す」は置かない。iPhone SE では帯の幅(343pt)が
-/// バナー(320pt)でほぼ埋まってラベルが入らず、「消す」は Pro を入れるまで押し先が無い。
+/// バナーは**ガラスの面に細いフチ(6pt)を付けて載せ、タブバーとの間を空ける**ので、
+/// その余白まで含めて空ける。面はバナーを包む大きさにして角丸も小さくする。
+/// 画面幅の面に四角いバナーを浮かせると、角の形も余白(上下と左右)も揃わず落ち着かない。
+/// デザイン(参照実装の `AdBar`)にある「AD」ラベルと「消す」は置かない。
+/// iPhone SE ではバナー(320pt)で幅がほぼ埋まってラベルが入らず、
+/// 「消す」は Pro を入れるまで押し先が無い。
 enum AdBanner {
     /// 広告を出すか。Pro を入れるときに「Pro を買っていない」に差し替える。
     static let isEnabled = true
@@ -23,8 +25,10 @@ enum AdBanner {
     /// バナー自体。320x50 固定(`AdBannerModel.start()`)
     static let bannerWidth: CGFloat = 320
     static let bannerHeight: CGFloat = 50
-    /// バナーを載せる面の内側余白(上下それぞれ)
-    static let barPadding: CGFloat = 12
+    /// バナーを載せる面のフチ(上下左右それぞれ)
+    static let barPadding: CGFloat = 6
+    /// 面の角丸。バナーの角は四角なので、フチの幅に見合う小ささに留める
+    static let barCornerRadius: CGFloat = 10
     /// 面とタブバーの間
     static let gap: CGFloat = 12
     /// 空けておく高さの合計
@@ -89,21 +93,18 @@ struct RootView: View {
     ///
     /// **広告が届くまでは領域だけ空けて帯を出さない。** 空のガラス枠を見せないためで、
     /// 高さは最初から固定なので、届いたときにレイアウトは動かない。
-    /// 帯の横余白は固定せず、帯幅いっぱいの中央にバナーを置く
-    /// (SE では左右 11.5pt しか残らない)。
     private func adBar(isActive: Bool) -> some View {
         ZStack {
             if let banner = ads.bannerView {
                 AdBannerView(banner: banner, isActive: isActive)
                     .frame(width: AdBanner.bannerWidth, height: AdBanner.bannerHeight)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, AdBanner.barPadding)
-                    .liquidGlass(cornerRadius: 22, role: .bar)
+                    .padding(AdBanner.barPadding)
+                    .liquidGlass(cornerRadius: AdBanner.barCornerRadius, role: .bar)
                     .opacity(ads.isLoaded ? 1 : 0)
                     .animation(.easeOut(duration: 0.25), value: ads.isLoaded)
             }
         }
-        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
         .padding(.top, AdBanner.topGap)
         .padding(.bottom, AdBanner.gap)
         .frame(height: AdBanner.reservedHeight)
