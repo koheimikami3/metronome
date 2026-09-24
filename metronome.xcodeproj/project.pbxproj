@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BEF6E200305F597C00A0E634 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = BEF6E202305F597C00A0E634 /* GoogleMobileAds */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		BEF6E02C305F597C00A0E634 /* metronome.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = metronome.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BEF6E200305F597C00A0E634 /* GoogleMobileAds in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = metronome;
 			packageProductDependencies = (
+				BEF6E202305F597C00A0E634 /* GoogleMobileAds */,
 			);
 			productName = metronome;
 			productReference = BEF6E02C305F597C00A0E634 /* metronome.app */;
@@ -107,6 +113,9 @@
 			);
 			mainGroup = BEF6E023305F597C00A0E634;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BEF6E201305F597C00A0E634 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BEF6E02D305F597C00A0E634 /* Products */;
 			projectDirPath = "";
@@ -273,6 +282,7 @@
 				INFOPLIST_FILE = metronome/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "メトロノーム";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "アプリ内に表示する広告を、あなたの興味に合ったものにするために使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -309,6 +319,7 @@
 				INFOPLIST_FILE = metronome/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "メトロノーム";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "アプリ内に表示する広告を、あなたの興味に合ったものにするために使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -353,6 +364,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BEF6E201305F597C00A0E634 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BEF6E202305F597C00A0E634 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BEF6E201305F597C00A0E634 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = BEF6E024305F597C00A0E634 /* Project object */;
 }
