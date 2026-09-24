@@ -34,9 +34,10 @@ metronome/                     # ソース(metronome.xcodeproj と同階層)
 ├── Support/
 │   ├── Haptics.swift
 │   ├── DisplayLink.swift       # CADisplayLink の薄い包み
-│   └── ReviewLink.swift
+│   ├── ReviewLink.swift
+│   └── Ads/                    # AdMob バナー(AdUnitIDs / AdBannerModel / AdBannerView)と ATT
 ├── Assets.xcassets/
-└── Info.plist                  # UIBackgroundModes だけを持つ(後述)
+└── Info.plist                  # INFOPLIST_KEY_* で書けないキーだけを持つ(後述)
 ```
 
 分割の粒度: 画面固有の小さな部品は `private var` として画面ファイルに置く。
@@ -72,7 +73,8 @@ Riverpod の `select` が自動で効く感覚に近い。旧来の `ObservableO
 | `TARGETED_DEVICE_FAMILY` | `1` | iPhone のみ |
 | `INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone` | `UIInterfaceOrientationPortrait` | 縦のみ。iPad 用の設定は削除済み |
 | `INFOPLIST_KEY_UIUserInterfaceStyle` | `Light` | システムのシート・アラートまでライトにする |
-| `INFOPLIST_FILE` | `metronome/Info.plist` | `UIBackgroundModes` のためだけに置く(後述) |
+| `INFOPLIST_FILE` | `metronome/Info.plist` | `INFOPLIST_KEY_*` の無いキーのために置く(後述) |
+| `INFOPLIST_KEY_NSUserTrackingUsageDescription` | 広告の説明文 | ATT ダイアログの本文。英単語帳と同じ文言 |
 | `MARKETING_VERSION` | `1.0.0` | `docs/release-notes.md` の表記に合わせる |
 
 ホーム画面の表示名 `メトロノーム` は、Assets の `CFBundleDisplayName` ではなく
@@ -81,9 +83,17 @@ Xcode の General → Display Name(= `INFOPLIST_KEY_CFBundleDisplayName`)で設�
 ### Info.plist が必要な理由と、同期グループの例外
 
 `GENERATE_INFOPLIST_FILE = YES` なので Info.plist は基本的に自動生成されるが、
-**`UIBackgroundModes` には対応する `INFOPLIST_KEY_*` が存在しない**。そのため
-`metronome/Info.plist` にこのキーだけを書き、`INFOPLIST_FILE` で指定している
-(Xcode が自動生成分をこのファイルにマージする)。
+**`UIBackgroundModes` / `GADApplicationIdentifier`(AdMob のアプリ ID)/
+`SKAdNetworkItems` には対応する `INFOPLIST_KEY_*` が存在しない**。そのため
+`metronome/Info.plist` にこれらだけを書き、`INFOPLIST_FILE` で指定している
+(Xcode が自動生成分をこのファイルにマージする)。`SKAdNetworkItems` は
+Google の推奨リストで、英単語帳の Info.plist と同じもの。
+
+### 依存パッケージ
+
+- **GoogleMobileAds**(SPM、`swift-package-manager-google-mobile-ads`、13.x)。
+  `Package.resolved` は `metronome.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/`
+  にあり、更新したら一緒にコミットする
 
 このプロジェクトは **synchronized folder group**(フォルダに置いたファイルが自動で
 ターゲットに入る仕組み)を使っているので、放っておくと `Info.plist` が

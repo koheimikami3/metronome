@@ -11,6 +11,9 @@ import os
 /// シミュレータでは再現しないので、実機の Xcode コンソールで読む前提で置いてある。
 /// これも原因が確定したら消す。
 ///
+/// `ads` は広告が出ないときの切り分け用(ATT の成り行きと読み込みの失敗)。
+/// これは常設でよい。
+///
 /// `os` の import をこのファイルに閉じたいので、呼び出し側には関数だけを見せる。
 nonisolated enum Diagnostics {
     private static let ui = Logger(subsystem: "com.kohei.mikami.metronome", category: "ui")
@@ -30,5 +33,12 @@ nonisolated enum Diagnostics {
     /// オーディオのライフサイクル(前面・背面・割り込み・構成変更・エンジンの状態)
     static func audio(_ message: String) {
         audioLog.notice("\(message, privacy: .public)")
+    }
+
+    private static let adsLog = Logger(subsystem: "com.kohei.mikami.metronome", category: "ads")
+
+    /// 広告と ATT
+    static func ads(_ message: String) {
+        adsLog.notice("\(message, privacy: .public)")
     }
 }

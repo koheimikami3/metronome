@@ -9,8 +9,8 @@ struct MetronomeScreen: View {
     private var theme: Theme { store.theme }
 
     var body: some View {
-        // 行間は画面の高さで決める。**広告の領域(100pt)を引くと iPhone SE 系は
-        // 中身に 498pt しか渡らず**、固定の部品で 419pt 使うので振り子が 79pt まで
+        // 行間は画面の高さで決める。**広告の領域(88pt)を引くと iPhone SE 系は
+        // 中身に 510pt しか渡らず**、固定の部品で 419pt 使うので振り子が 91pt まで
         // 縮む。5 か所を 2pt ずつ詰めて 10pt 返す。広告が無ければ SE でも 598pt
         // 渡るので、そのときは詰めずに 14 のまま。
         GeometryReader { geo in
