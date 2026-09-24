@@ -75,7 +75,7 @@ Riverpod の `select` が自動で効く感覚に近い。旧来の `ObservableO
 | `INFOPLIST_KEY_UIUserInterfaceStyle` | `Light` | システムのシート・アラートまでライトにする |
 | `INFOPLIST_FILE` | `metronome/Info.plist` | `INFOPLIST_KEY_*` の無いキーのために置く(後述) |
 | `INFOPLIST_KEY_NSUserTrackingUsageDescription` | 広告の説明文 | ATT ダイアログの本文。英単語帳と同じ文言 |
-| `MARKETING_VERSION` | `1.0.0` | `docs/release-notes.md` の表記に合わせる |
+| `MARKETING_VERSION` | `1.1.0` | `docs/release-notes.md` の表記に合わせる |
 
 ホーム画面の表示名 `メトロノーム` は、Assets の `CFBundleDisplayName` ではなく
 Xcode の General → Display Name(= `INFOPLIST_KEY_CFBundleDisplayName`)で設定する。
