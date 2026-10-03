@@ -18,12 +18,11 @@ enum AdUnitIDs {
     }
 
     /// バックグラウンドから戻ったときに出す全画面広告。
-    /// 本番は**ユニット作成前なので空**(空のあいだ release では出さない)。
     static var appOpen: String {
         #if DEBUG
         "ca-app-pub-3940256099942544/5575463023"
         #else
-        ""
+        "ca-app-pub-3768273762534884/4644061749"
         #endif
     }
 }
