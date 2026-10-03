@@ -4,9 +4,10 @@ import SwiftUI
 struct LicenseListView: View {
     @Environment(\.dismiss) private var dismiss
 
-    /// 初版は外部依存が無い。SF Symbols は Apple のシステムフォント扱いだが、
-    /// 表示しておいて損はないので残す。
+    /// SF Symbols は Apple のシステムフォント扱いだが、表示しておいて損はないので残す。
     private let items: [(name: String, license: String)] = [
+        ("Google Mobile Ads SDK", "Google LLC"),
+        ("RevenueCat", "MIT License — Copyright (c) RevenueCat, Inc."),
         ("SF Symbols", "Apple Inc.")
     ]
 

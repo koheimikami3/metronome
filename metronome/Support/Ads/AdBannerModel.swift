@@ -22,10 +22,12 @@ final class AdBannerModel: NSObject, BannerViewDelegate {
     func start(using sdk: AdsSDK) async {
         let unitID = AdUnitIDs.tabBarBanner
         // ID が空なら SDK に一切触れない(未登録でも動くビルドにするため)
-        guard AdBanner.isEnabled, !unitID.isEmpty, !hasStarted else { return }
+        guard !unitID.isEmpty, !hasStarted else { return }
         hasStarted = true
 
         await sdk.ensureStarted()
+        // 待つ間に Pro を買われていたら作らない
+        guard hasStarted else { return }
 
         // 320x50 固定。アダプティブは幅によって高さが 50 を超えうるので、
         // 固定で空けている領域(`AdBanner.reservedHeight`)と合わない。
@@ -34,6 +36,15 @@ final class AdBannerModel: NSObject, BannerViewDelegate {
         banner.delegate = self
         bannerView = banner
         banner.load(Request())
+    }
+
+    /// バナーを捨てる。Pro を買ったときに呼ぶ(返金で戻れば `start` からやり直す)。
+    /// 帯ごと画面から外れるので、器から外す必要は無い。
+    func stop() {
+        hasStarted = false
+        bannerView?.delegate = nil
+        bannerView = nil
+        isLoaded = false
     }
 
     // MARK: - BannerViewDelegate

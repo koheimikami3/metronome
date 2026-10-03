@@ -34,6 +34,12 @@ final class AppOpenAdModel: NSObject, FullScreenContentDelegate {
         await load()
     }
 
+    /// 先読みした広告を捨てる。Pro を買ったときに呼ぶ(返金で戻れば `start` からやり直す)。
+    func stop() {
+        hasStarted = false
+        ad = nil
+    }
+
     /// 背面から戻ったときに呼ぶ。用意できていれば出し、無ければ次回に向けて読み込む。
     func presentIfReady() {
         guard hasStarted, !isShowing else { return }
@@ -55,6 +61,8 @@ final class AppOpenAdModel: NSObject, FullScreenContentDelegate {
 
         do {
             let loaded = try await AppOpenAd.load(with: AdUnitIDs.appOpen, request: Request())
+            // 待つ間に Pro を買われていたら捨てる
+            guard hasStarted else { return }
             loaded.fullScreenContentDelegate = self
             ad = loaded
             loadedAt = Date()
@@ -67,7 +75,7 @@ final class AppOpenAdModel: NSObject, FullScreenContentDelegate {
     private func finishShowing() {
         isShowing = false
         ad = nil
-        Task { await load() }
+        Task { await load() }   // Pro を買った後なら load の入口で引き返す
     }
 
     // MARK: - FullScreenContentDelegate
