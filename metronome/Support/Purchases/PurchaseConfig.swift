@@ -9,11 +9,21 @@
 /// entitlement `pro` / offering `default` の Lifetime パッケージ。
 enum PurchaseConfig {
 
-    /// 公開 SDK キー(Apple 用。`appl_` で始まる)。
+    /// 公開 SDK キー。
+    ///
+    /// debug は RevenueCat の Test Store のキー(`test_` で始まる)。App Store を通さずに
+    /// 購入を試せる。**release に入れると SDK が起動時にわざとクラッシュさせる**ので、
+    /// AdMob のテスト ID と同じく `#if DEBUG` で分ける。release は Apple 用(`appl_`)。
     ///
     /// **空なら SDK に一切触れない。** Pro カードも出さず、広告は出たままになる。
     /// RevenueCat への登録前でも動くビルドにするため(`AdUnitIDs` と同じ保険)。
-    static let appleAPIKey = ""
+    static var appleAPIKey: String {
+        #if DEBUG
+        "test_yrhEUZxJWQzJmWCAuxUDcEAuVtP"
+        #else
+        ""
+        #endif
+    }
 
     /// 「広告を非表示にする」の entitlement ID(RevenueCat のダッシュボードで作る)
     static let entitlementID = "pro"

@@ -208,6 +208,8 @@
   Lifetime パッケージ。値は `Support/Purchases/PurchaseConfig.swift`
 - **SDK キーが空なら RevenueCat に一切触れず、Pro カードも出さない。**
   押しても何も起きないカードを置くより、無いほうがよい
+- **debug は Test Store のキー(`test_`)、release は `appl_`。** Test Store のキーは
+  release ビルドで使うと SDK が起動時にクラッシュさせる(提出事故の防止)
 - **購入状態は `customerInfoStream` を購読し続けて追従する。** 返金・別端末での購入は
   購入導線を通らない。復元は購入済みでも押せるようにする
 - **最後に分かった購入状態を UserDefaults に控え、次の起動の初期値にする。**
