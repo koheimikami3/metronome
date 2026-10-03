@@ -3,6 +3,7 @@ import SwiftUI
 /// 03 — 設定(この画面だけ縦スクロールする)
 struct SettingsScreen: View {
     @Environment(MetronomeStore.self) private var store
+    @Environment(PurchaseModel.self) private var purchases
     @Environment(\.openURL) private var openURL
     @State private var isShowingLicenses = false
 
@@ -21,6 +22,13 @@ struct SettingsScreen: View {
                     .foregroundStyle(Ink.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 10)
+
+                // 課金を扱えない(SDK キーが空)ときは出さない。押しても何も起きない
+                // カードを置くより、無いほうがよい
+                if purchases.isAvailable {
+                    SectionLabel(text: "Pro").padding(.top, 20)
+                    ProCard(theme: theme).padding(.top, 8)
+                }
 
                 SectionLabel(text: "クリック音").padding(.top, 20)
                 voiceCard.padding(.top, 8)

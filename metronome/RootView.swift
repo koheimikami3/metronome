@@ -6,19 +6,16 @@ enum Tab: Hashable {
 
 /// バナー広告の領域。
 ///
-/// **広告を出すときだけ空ける。** 出さないとき(将来 Pro を買ったとき)は
+/// **広告を出すときだけ空ける。** 出さないとき(Pro を買ったとき)は
 /// 画面いっぱいを使い、メトロノーム画面の振り子もその高さまで伸びる。
 ///
 /// バナーは**ガラスの面に細いフチ(6pt)を付けて載せ、タブバーとの間を空ける**ので、
 /// その余白まで含めて空ける。面はバナーを包む大きさにして角丸も小さくする。
 /// 画面幅の面に四角いバナーを浮かせると、角の形も余白(上下と左右)も揃わず落ち着かない。
 /// デザイン(参照実装の `AdBar`)にある「AD」ラベルと「消す」は置かない。
-/// iPhone SE ではバナー(320pt)で幅がほぼ埋まってラベルが入らず、
-/// 「消す」は Pro を入れるまで押し先が無い。
+/// iPhone SE ではバナー(320pt)で幅がほぼ埋まってラベルが入らない。
+/// 「消す」は置かない(購入の導線は設定の Pro カードだけにしている)。
 enum AdBanner {
-    /// 広告を出すか。Pro を入れるときに「Pro を買っていない」に差し替える。
-    static let isEnabled = true
-
     /// 画面の中身との間。メトロノーム画面の行間と同じ 14 にして、
     /// 「プリセット → TAP」と「TAP → 広告」の間隔を揃える
     static let topGap: CGFloat = 14
@@ -43,7 +40,13 @@ enum AdBanner {
 struct RootView: View {
     @State private var store = MetronomeStore()
     @State private var tab: Tab = .metronome
+    @State private var adsSDK = AdsSDK()
     @State private var ads = AdBannerModel()
+    @State private var appOpenAd = AppOpenAdModel()
+    @State private var purchases = PurchaseModel()
+    /// 背面に回ったか。App Open は背面から戻ったときだけ出す。
+    /// `.inactive` の往復(ATT・購入のシート・コントロールセンター)では出さない
+    @State private var isReturningFromBackground = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -61,13 +64,44 @@ struct RootView: View {
                 .tag(Tab.settings)
         }
         .environment(store)
+        .environment(purchases)
         .tint(store.theme.deep)
         .preferredColorScheme(.light)
         // ATT はシーンがアクティブでないとダイアログが出ないので、その状態を渡す
         .onChange(of: scenePhase, initial: true) { _, phase in
-            ads.tracking.sceneActivityChanged(isActive: phase == .active)
+            adsSDK.tracking.sceneActivityChanged(isActive: phase == .active)
+            switch phase {
+            case .background:
+                isReturningFromBackground = true
+            case .active where isReturningFromBackground:
+                isReturningFromBackground = false
+                appOpenAd.presentIfReady()
+            default:
+                break
+            }
         }
-        .task { await ads.start() }
+        .task {
+            purchases.start()
+            // Pro の人には ATT も聞かないので、購入状態が分かってから広告を起動する
+            await purchases.waitUntilProKnown()
+            await startAds()
+        }
+        // 購入・復元・返金・別端末での購入のどれでもここを通る
+        .onChange(of: purchases.isPro) { _, isPro in
+            if isPro {
+                ads.stop()
+                appOpenAd.stop()
+            } else {
+                Task { await startAds() }
+            }
+        }
+    }
+
+    /// 広告を起動する。Pro なら何もしない。2 度呼ばれても各モデルが弾く。
+    private func startAds() async {
+        guard !purchases.isPro else { return }
+        await ads.start(using: adsSDK)
+        await appOpenAd.start(using: adsSDK)
     }
 
     /// 各タブに共通で付ける背景と、バナー広告の領域。
@@ -82,7 +116,7 @@ struct RootView: View {
             // spacing: 0 を明示する。既定は 8pt 入るので、**空けないときでも
             // 8pt 取られ、空けるときは `reservedHeight` より 8pt 広くなる**。
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                if AdBanner.isEnabled {
+                if !purchases.isPro {
                     adBar(isActive: owner == tab)
                 }
             }

@@ -16,20 +16,18 @@ final class AdBannerModel: NSObject, BannerViewDelegate {
     /// 共有のバナー。SDK の初期化が済むまでは nil
     private(set) var bannerView: BannerView?
 
-    @ObservationIgnored let tracking = TrackingAuthorizer()
     @ObservationIgnored private var hasStarted = false
 
-    /// ATT → SDK の初期化 → 読み込み、の順に進める。起動時に 1 回呼ぶ。
-    func start() async {
+    /// SDK の起動(ATT → 初期化)を待ってから読み込む。起動時に 1 回呼ぶ。
+    func start(using sdk: AdsSDK) async {
         let unitID = AdUnitIDs.tabBarBanner
         // ID が空なら SDK に一切触れない(未登録でも動くビルドにするため)
-        guard AdBanner.isEnabled, !unitID.isEmpty, !hasStarted else { return }
+        guard !unitID.isEmpty, !hasStarted else { return }
         hasStarted = true
 
-        // ATT はダイアログを出せなかった場合も戻ってくる。そのときは
-        // 非パーソナライズ広告として先へ進み、出し直しは向こうが引き受ける。
-        await tracking.ensureRequested()
-        _ = await MobileAds.shared.start()
+        await sdk.ensureStarted()
+        // 待つ間に Pro を買われていたら作らない
+        guard hasStarted else { return }
 
         // 320x50 固定。アダプティブは幅によって高さが 50 を超えうるので、
         // 固定で空けている領域(`AdBanner.reservedHeight`)と合わない。
@@ -38,6 +36,15 @@ final class AdBannerModel: NSObject, BannerViewDelegate {
         banner.delegate = self
         bannerView = banner
         banner.load(Request())
+    }
+
+    /// バナーを捨てる。Pro を買ったときに呼ぶ(返金で戻れば `start` からやり直す)。
+    /// 帯ごと画面から外れるので、器から外す必要は無い。
+    func stop() {
+        hasStarted = false
+        bannerView?.delegate = nil
+        bannerView = nil
+        isLoaded = false
     }
 
     // MARK: - BannerViewDelegate

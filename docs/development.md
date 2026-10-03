@@ -30,12 +30,13 @@ metronome/                     # ソース(metronome.xcodeproj と同階層)
 ├── Features/
 │   ├── Metronome/              # 01 メトロノーム(+ PendulumView / BeatDotsView)
 │   ├── Signature/              # 02 拍子
-│   └── Settings/               # 03 設定(+ LicenseListView / OtherAppsCard)
+│   └── Settings/               # 03 設定(+ ProCard / LicenseListView / OtherAppsCard)
 ├── Support/
 │   ├── Haptics.swift
 │   ├── DisplayLink.swift       # CADisplayLink の薄い包み
 │   ├── ReviewLink.swift
-│   └── Ads/                    # AdMob バナー(AdUnitIDs / AdBannerModel / AdBannerView)と ATT
+│   ├── Ads/                    # AdMob(AdsSDK / AdUnitIDs / AdBannerModel / AdBannerView / AppOpenAdModel)と ATT
+│   └── Purchases/              # RevenueCat の Pro(PurchaseConfig / PurchaseModel)
 ├── Assets.xcassets/
 └── Info.plist                  # INFOPLIST_KEY_* で書けないキーだけを持つ(後述)
 ```
@@ -75,7 +76,7 @@ Riverpod の `select` が自動で効く感覚に近い。旧来の `ObservableO
 | `INFOPLIST_KEY_UIUserInterfaceStyle` | `Light` | システムのシート・アラートまでライトにする |
 | `INFOPLIST_FILE` | `metronome/Info.plist` | `INFOPLIST_KEY_*` の無いキーのために置く(後述) |
 | `INFOPLIST_KEY_NSUserTrackingUsageDescription` | 広告の説明文 | ATT ダイアログの本文。英単語帳と同じ文言 |
-| `MARKETING_VERSION` | `1.1.0` | `docs/release-notes.md` の表記に合わせる |
+| `MARKETING_VERSION` | `1.2.0` | `docs/release-notes.md` の表記に合わせる |
 
 ホーム画面の表示名 `メトロノーム` は、Assets の `CFBundleDisplayName` ではなく
 Xcode の General → Display Name(= `INFOPLIST_KEY_CFBundleDisplayName`)で設定する。
@@ -94,6 +95,8 @@ Google の推奨リストで、英単語帳の Info.plist と同じもの。
 - **GoogleMobileAds**(SPM、`swift-package-manager-google-mobile-ads`、13.x)。
   `Package.resolved` は `metronome.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/`
   にあり、更新したら一緒にコミットする
+- **RevenueCat**(SPM、`purchases-ios-spm`、5.x)。製品は `RevenueCat` だけ
+  (`RevenueCatUI` のペイウォールは使わない)
 
 このプロジェクトは **synchronized folder group**(フォルダに置いたファイルが自動で
 ターゲットに入る仕組み)を使っているので、放っておくと `Info.plist` が
