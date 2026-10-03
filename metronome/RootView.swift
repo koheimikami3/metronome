@@ -43,6 +43,7 @@ enum AdBanner {
 struct RootView: View {
     @State private var store = MetronomeStore()
     @State private var tab: Tab = .metronome
+    @State private var adsSDK = AdsSDK()
     @State private var ads = AdBannerModel()
     @Environment(\.scenePhase) private var scenePhase
 
@@ -65,9 +66,9 @@ struct RootView: View {
         .preferredColorScheme(.light)
         // ATT はシーンがアクティブでないとダイアログが出ないので、その状態を渡す
         .onChange(of: scenePhase, initial: true) { _, phase in
-            ads.tracking.sceneActivityChanged(isActive: phase == .active)
+            adsSDK.tracking.sceneActivityChanged(isActive: phase == .active)
         }
-        .task { await ads.start() }
+        .task { await ads.start(using: adsSDK) }
     }
 
     /// 各タブに共通で付ける背景と、バナー広告の領域。
