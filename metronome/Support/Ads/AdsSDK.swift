@@ -29,6 +29,11 @@ final class AdsSDK {
         // ATT はダイアログを出せなかった場合も戻ってくる。そのときは
         // 非パーソナライズ広告として先へ進み、出し直しは向こうが引き受ける。
         await tracking.ensureRequested()
+        // オーディオセッションはアプリが持つと SDK に伝える。伝えないと
+        // 動画広告のために SDK がカテゴリを変え、**再生中のクリックが止まりうる**。
+        // セッションは `.playback` + `.mixWithOthers` のままなので、広告の音は
+        // クリックに重なって鳴る(App Open は再生中でも出す方針)。
+        MobileAds.shared.audioVideoManager.isAudioSessionApplicationManaged = true
         _ = await MobileAds.shared.start()
     }
 }

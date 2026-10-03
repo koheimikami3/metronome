@@ -45,6 +45,10 @@ struct RootView: View {
     @State private var tab: Tab = .metronome
     @State private var adsSDK = AdsSDK()
     @State private var ads = AdBannerModel()
+    @State private var appOpenAd = AppOpenAdModel()
+    /// 背面に回ったか。App Open は背面から戻ったときだけ出す。
+    /// `.inactive` の往復(ATT・購入のシート・コントロールセンター)では出さない
+    @State private var isReturningFromBackground = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -67,8 +71,18 @@ struct RootView: View {
         // ATT はシーンがアクティブでないとダイアログが出ないので、その状態を渡す
         .onChange(of: scenePhase, initial: true) { _, phase in
             adsSDK.tracking.sceneActivityChanged(isActive: phase == .active)
+            switch phase {
+            case .background:
+                isReturningFromBackground = true
+            case .active where isReturningFromBackground:
+                isReturningFromBackground = false
+                appOpenAd.presentIfReady()
+            default:
+                break
+            }
         }
         .task { await ads.start(using: adsSDK) }
+        .task { await appOpenAd.start(using: adsSDK) }
     }
 
     /// 各タブに共通で付ける背景と、バナー広告の領域。
