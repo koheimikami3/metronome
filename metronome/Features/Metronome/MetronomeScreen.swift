@@ -1,8 +1,10 @@
 import SwiftUI
+import StoreKit
 
 /// 01 — メトロノーム
 struct MetronomeScreen: View {
     @Environment(MetronomeStore.self) private var store
+    @Environment(\.requestReview) private var requestReview
     @State private var isEditingBpm = false
     @State private var bpmInput = ""
 
@@ -177,7 +179,13 @@ struct MetronomeScreen: View {
 
     private var playButton: some View {
         Button {
-            store.toggle()
+            // STOP の直後(練習を終えた瞬間)だけレビュー依頼の判定に回す
+            if let played = store.toggle(), ReviewPrompter.shouldRequest(afterPlaying: played) {
+                Task {
+                    try? await Task.sleep(for: .seconds(ReviewPrompter.promptDelay))
+                    requestReview()
+                }
+            }
         } label: {
             Text(store.isRunning ? "STOP" : "START")
                 .font(.system(size: 19, weight: .bold))

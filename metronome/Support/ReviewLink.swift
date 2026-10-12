@@ -1,11 +1,12 @@
 import Foundation
 
-/// App Store のレビュー投稿画面へのリンク。
+/// App Store のレビュー投稿画面へのリンク(設定の「App Store でレビューを書く」)。
 ///
-/// `requestReview` を使わないのは、OS 側に年 3 回の上限があり、
+/// この行で `requestReview` を使わないのは、OS 側に年 3 回の上限があり、
 /// **実際にダイアログが出たかがアプリから分からない**ため。
 /// 「レビューを書く」を押して何も起きないのは壊れて見える。
 /// この URL なら必ず App Store が開く。
+/// `requestReview` は自動の依頼(`ReviewPrompter`)でだけ使う。
 enum ReviewLink {
 
     /// App Store Connect の Apple ID(アプリ登録時に採番される 10 桁)。

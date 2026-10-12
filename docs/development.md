@@ -34,9 +34,12 @@ metronome/                     # ソース(metronome.xcodeproj と同階層)
 ├── Support/
 │   ├── Haptics.swift
 │   ├── DisplayLink.swift       # CADisplayLink の薄い包み
-│   ├── ReviewLink.swift
+│   ├── ReviewLink.swift        # 設定の「レビューを書く」の URL
+│   ├── ReviewPrompter.swift    # 自動のレビュー依頼を出すかの判定
+│   ├── AnalyticsSetup.swift    # Firebase の初期化(release だけ)
 │   ├── Ads/                    # AdMob(AdsSDK / AdUnitIDs / AdBannerModel / AdBannerView / AppOpenAdModel)と ATT
 │   └── Purchases/              # RevenueCat の Pro(PurchaseConfig / PurchaseModel)
+├── GoogleService-Info.plist     # Firebase の設定(公開値)
 ├── Assets.xcassets/
 └── Info.plist                  # INFOPLIST_KEY_* で書けないキーだけを持つ(後述)
 ```
@@ -95,6 +98,8 @@ Google の推奨リストで、英単語帳の Info.plist と同じもの。
 - **GoogleMobileAds**(SPM、`swift-package-manager-google-mobile-ads`、13.x)。
   `Package.resolved` は `metronome.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/`
   にあり、更新したら一緒にコミットする
+- **Firebase**(SPM、`firebase-ios-sdk`、13.x)。製品は `FirebaseAnalytics` だけ。
+  Firebase の SPM 手順に従い `OTHER_LDFLAGS` に `-ObjC` を入れてある
 - **RevenueCat**(SPM、`purchases-ios-spm`、5.x)。製品は `RevenueCat` だけ
   (`RevenueCatUI` のペイウォールは使わない)
 

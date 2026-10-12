@@ -129,6 +129,10 @@ final class MetronomeStore {
     /// エンジンから受け取った「これから鳴る拍」。発音時刻を過ぎたものから消化する。
     private var pendingBeats: [(beat: Int, audibleAt: TimeInterval)] = []
 
+    /// START を押した時刻。STOP で練習時間を出し、レビュー依頼の判定に渡す。
+    /// 背面で鳴らしていた時間も練習に含めたいので、端末のスリープ中も進む壁時計で測る。
+    private var startedAt: Date?
+
     // MARK: - 組み立て
 
     init() {
@@ -190,9 +194,18 @@ final class MetronomeStore {
 
     // MARK: - 操作
 
-    func toggle() {
+    /// 再生のオン・オフ。**STOP したときだけ、今回の再生時間を返す**(START では nil)。
+    /// 画面はこれでレビュー依頼を出すかを決める(`ReviewPrompter`)。
+    @discardableResult
+    func toggle() -> TimeInterval? {
         Diagnostics.toggle(isRunning: isRunning)
-        isRunning ? stop() : start()
+        guard isRunning else {
+            start()
+            return nil
+        }
+        let played = startedAt.map { Date().timeIntervalSince($0) }
+        stop()
+        return played
     }
 
     private func start() {
@@ -200,6 +213,7 @@ final class MetronomeStore {
         beatsSinceStart = 0
         step = -1
         currentBeatStartedAt = nil
+        startedAt = Date()
         isRunning = true
         engine.start()
         startDisplayLink()
@@ -222,6 +236,7 @@ final class MetronomeStore {
         beatsSinceStart = 0
         step = -1
         currentBeatStartedAt = nil
+        startedAt = nil
     }
 
     func nudgeBpm(_ delta: Int) {
