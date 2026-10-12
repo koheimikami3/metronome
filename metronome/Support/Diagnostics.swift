@@ -12,7 +12,8 @@ import os
 /// これも原因が確定したら消す。
 ///
 /// `ads` は広告が出ないときの切り分け用(ATT の成り行きと読み込みの失敗)、
-/// `purchases` は課金の切り分け用。どちらも常設でよい。
+/// `purchases` は課金の切り分け用、`review` は自動のレビュー依頼を出した・見送った理由。
+/// いずれも常設でよい。
 ///
 /// `os` の import をこのファイルに閉じたいので、呼び出し側には関数だけを見せる。
 nonisolated enum Diagnostics {
@@ -47,5 +48,12 @@ nonisolated enum Diagnostics {
     /// 課金(購入状態の変化と失敗)
     static func purchases(_ message: String) {
         purchasesLog.notice("\(message, privacy: .public)")
+    }
+
+    private static let reviewLog = Logger(subsystem: "com.kohei.mikami.metronome", category: "review")
+
+    /// 自動のレビュー依頼(出す・見送るの判定理由)
+    static func review(_ message: String) {
+        reviewLog.notice("\(message, privacy: .public)")
     }
 }
