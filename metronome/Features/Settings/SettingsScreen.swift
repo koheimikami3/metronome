@@ -16,7 +16,7 @@ struct SettingsScreen: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                Text("設定")
+                Text("Settings")
                     .font(.system(size: 22, weight: .bold))
                     .kerning(-0.4)
                     .foregroundStyle(Ink.primary)
@@ -30,21 +30,21 @@ struct SettingsScreen: View {
                     ProCard(theme: theme).padding(.top, 8)
                 }
 
-                SectionLabel(text: "クリック音").padding(.top, 20)
+                SectionLabel(text: "Click Sound").padding(.top, 20)
                 voiceCard.padding(.top, 8)
 
-                SectionLabel(text: "テーマ").padding(.top, 20)
+                SectionLabel(text: "Theme").padding(.top, 20)
                 themeCard.padding(.top, 8)
 
                 if ReviewLink.writeReviewURL != nil {
-                    SectionLabel(text: "サポート").padding(.top, 20)
+                    SectionLabel(text: "Support").padding(.top, 20)
                     reviewCard.padding(.top, 8)
                 }
 
-                SectionLabel(text: "作者の他のアプリ").padding(.top, 20)
+                SectionLabel(text: "More Apps").padding(.top, 20)
                 OtherAppsCard(theme: theme).padding(.top, 8)
 
-                SectionLabel(text: "情報").padding(.top, 20)
+                SectionLabel(text: "About").padding(.top, 20)
                 infoCard.padding(.top, 8)
             }
             .padding(.horizontal, 16)
@@ -109,7 +109,7 @@ struct SettingsScreen: View {
                 // 罫線からの 18 と、下の 6 + カードの内側余白 12 = 18 で
                 // 行を上下の真ん中に置く。詰めるとスライダーが窮屈に見える。
                 HStack(spacing: 18) {
-                    Text("音量")
+                    Text("Volume")
                         .font(.system(size: 15))
                         .kerning(-0.2)
                         .foregroundStyle(Ink.primary)
@@ -120,7 +120,7 @@ struct SettingsScreen: View {
                         value: $store.volume,
                         range: 0...1,
                         step: 0.05,
-                        label: "音量",
+                        label: "Volume",
                         valueText: { "\(Int(($0 * 100).rounded()))%" },
                         height: 6,
                         knob: 24,
@@ -170,7 +170,7 @@ struct SettingsScreen: View {
 
     private var reviewCard: some View {
         GlassCard(radius: 22, padding: 0) {
-            SettingRow(title: "App Store でレビューを書く",
+            SettingRow(title: "Write a Review on the App Store",
                        action: {
                            if let url = ReviewLink.writeReviewURL { openURL(url) }
                        }) {
@@ -184,13 +184,13 @@ struct SettingsScreen: View {
     private var infoCard: some View {
         GlassCard(radius: 26, padding: 0) {
             VStack(spacing: 0) {
-                SettingRow(title: "バージョン") {
+                SettingRow(title: "Version") {
                     Text(appVersion)
                         .font(.system(size: 15))
                         .foregroundStyle(Ink.faint)
                 }
                 Hairline()
-                SettingRow(title: "ライセンス", action: { isShowingLicenses = true }) {
+                SettingRow(title: "Licenses", action: { isShowingLicenses = true }) {
                     RowChevron()
                 }
             }

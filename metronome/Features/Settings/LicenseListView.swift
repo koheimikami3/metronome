@@ -25,11 +25,11 @@ struct LicenseListView: View {
                     .padding(.vertical, 4)
                 }
             }
-            .navigationTitle("ライセンス")
+            .navigationTitle("Licenses")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("閉じる") { dismiss() }
+                    Button("Close") { dismiss() }
                 }
             }
         }

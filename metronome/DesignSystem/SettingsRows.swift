@@ -3,7 +3,7 @@ import SwiftUI
 /// 設定画面の 1 行。タイトル + 右側の値かシェブロン。
 /// `action` が nil の行は表示専用(バージョンなど)。
 struct SettingRow<Trailing: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     var action: (() -> Void)?
     @ViewBuilder var trailing: Trailing
 
@@ -43,7 +43,7 @@ struct Hairline: View {
 
 /// カードの上に置く小見出し。
 struct SectionLabel: View {
-    let text: String
+    let text: LocalizedStringKey
 
     var body: some View {
         Text(text)

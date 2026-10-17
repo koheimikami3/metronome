@@ -20,28 +20,28 @@ struct Subdivision: Equatable, Sendable {
 
 extension Subdivision {
     static let quarterBased: [Subdivision] = [
-        Subdivision(label: "4分", noteHeads: 1, beams: 0, pulses: 1),
-        Subdivision(label: "8分", noteHeads: 2, beams: 1, pulses: 2),
-        Subdivision(label: "3連", noteHeads: 3, beams: 1, pulses: 3, tupletNumber: "3"),
-        Subdivision(label: "16分", noteHeads: 4, beams: 2, pulses: 4)
+        Subdivision(label: String(localized: "Quarter notes"), noteHeads: 1, beams: 0, pulses: 1),
+        Subdivision(label: String(localized: "Eighth notes"), noteHeads: 2, beams: 1, pulses: 2),
+        Subdivision(label: String(localized: "Triplets"), noteHeads: 3, beams: 1, pulses: 3, tupletNumber: "3"),
+        Subdivision(label: String(localized: "Sixteenth notes"), noteHeads: 4, beams: 2, pulses: 4)
     ]
     static let compoundEighth: [Subdivision] = [
-        Subdivision(label: "付点4分", noteHeads: 1, beams: 0, pulses: 1, dotted: true),
-        Subdivision(label: "8分", noteHeads: 3, beams: 1, pulses: 3),
-        Subdivision(label: "16分", noteHeads: 6, beams: 2, pulses: 6, dense: true)
+        Subdivision(label: String(localized: "Dotted quarter notes"), noteHeads: 1, beams: 0, pulses: 1, dotted: true),
+        Subdivision(label: String(localized: "Eighth notes"), noteHeads: 3, beams: 1, pulses: 3),
+        Subdivision(label: String(localized: "Sixteenth notes"), noteHeads: 6, beams: 2, pulses: 6, dense: true)
     ]
     static let eighthBased: [Subdivision] = [
-        Subdivision(label: "8分", noteHeads: 1, beams: 1, pulses: 1),
-        Subdivision(label: "16分", noteHeads: 2, beams: 2, pulses: 2),
-        Subdivision(label: "3連", noteHeads: 3, beams: 2, pulses: 3, tupletNumber: "3")
+        Subdivision(label: String(localized: "Eighth notes"), noteHeads: 1, beams: 1, pulses: 1),
+        Subdivision(label: String(localized: "Sixteenth notes"), noteHeads: 2, beams: 2, pulses: 2),
+        Subdivision(label: String(localized: "Triplets"), noteHeads: 3, beams: 2, pulses: 3, tupletNumber: "3")
     ]
     static let compoundSixteenth: [Subdivision] = [
-        Subdivision(label: "付点8分", noteHeads: 1, beams: 1, pulses: 1, dotted: true),
-        Subdivision(label: "16分", noteHeads: 3, beams: 2, pulses: 3)
+        Subdivision(label: String(localized: "Dotted eighth notes"), noteHeads: 1, beams: 1, pulses: 1, dotted: true),
+        Subdivision(label: String(localized: "Sixteenth notes"), noteHeads: 3, beams: 2, pulses: 3)
     ]
     static let sixteenthBased: [Subdivision] = [
-        Subdivision(label: "16分", noteHeads: 1, beams: 2, pulses: 1),
-        Subdivision(label: "32分", noteHeads: 2, beams: 3, pulses: 2)
+        Subdivision(label: String(localized: "Sixteenth notes"), noteHeads: 1, beams: 2, pulses: 1),
+        Subdivision(label: String(localized: "Thirty-second notes"), noteHeads: 2, beams: 3, pulses: 2)
     ]
 
     /// 分母と拍のまとまり(単純 = 1 / 複合 = 3)から、選べる分割を返す。

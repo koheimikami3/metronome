@@ -31,7 +31,7 @@ struct SignatureScreen: View {
 
     private var header: some View {
         HStack {
-            Text("拍子")
+            Text("Time Signature")
                 .font(.system(size: 22, weight: .bold))
                 .kerning(-0.4)
                 .foregroundStyle(Ink.primary)
@@ -88,7 +88,7 @@ struct SignatureScreen: View {
     private var denominatorCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text("1拍の音符")
+                Text("Beat unit")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Ink.muted)
 
@@ -116,11 +116,11 @@ struct SignatureScreen: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("強弱")
+                    Text("Accents")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Ink.muted)
                     Spacer()
-                    Button("リセット") { store.resetAccents() }
+                    Button("Reset") { store.resetAccents() }
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(theme.deep)
                 }
@@ -168,9 +168,9 @@ struct SignatureScreen: View {
             .frame(maxWidth: .infinity, alignment: .bottom)
         }
         .buttonStyle(PressScale())
-        .accessibilityLabel("\(index + 1) 拍目")
+        .accessibilityLabel("Beat \(index + 1)")
         .accessibilityValue(accent.label)
-        .accessibilityHint("タップで 強・弱・休 を切り替え")
+        .accessibilityHint("Tap to cycle Strong, Weak, and Rest.")
     }
 
     // MARK: - 分割
@@ -178,7 +178,7 @@ struct SignatureScreen: View {
     private var subdivisionCard: some View {
         GlassCard(padding: 12) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("分割")
+                Text("Subdivision")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Ink.muted)
                     .padding(.leading, 6)

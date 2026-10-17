@@ -52,15 +52,15 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $tab) {
             screen(.metronome) { MetronomeScreen() }
-                .tabItem { Label("メトロノーム", systemImage: "metronome") }
+                .tabItem { Label("Metronome", systemImage: "metronome") }
                 .tag(Tab.metronome)
 
             screen(.signature) { SignatureScreen() }
-                .tabItem { Label("拍子", systemImage: "music.note.list") }
+                .tabItem { Label("Time Signature", systemImage: "music.note.list") }
                 .tag(Tab.signature)
 
             screen(.settings) { SettingsScreen() }
-                .tabItem { Label("設定", systemImage: "gearshape") }
+                .tabItem { Label("Settings", systemImage: "gearshape") }
                 .tag(Tab.settings)
         }
         .environment(store)
