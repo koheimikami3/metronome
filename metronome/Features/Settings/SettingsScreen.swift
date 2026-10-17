@@ -13,6 +13,13 @@ struct SettingsScreen: View {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
     }
 
+    /// 紹介しているアプリが日本語のみなので、「作者の他のアプリ」は日本語表示のときだけ出す。
+    /// `Locale.current` ではなくバンドルが選んだ言語で判定する。端末の言語が
+    /// 未対応(仏語など)で英語にフォールバックしたときも、表示と食い違わないため。
+    private var isJapaneseUI: Bool {
+        Bundle.main.preferredLocalizations.first == "ja"
+    }
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
@@ -41,8 +48,10 @@ struct SettingsScreen: View {
                     reviewCard.padding(.top, 8)
                 }
 
-                SectionLabel(text: "More Apps").padding(.top, 20)
-                OtherAppsCard(theme: theme).padding(.top, 8)
+                if isJapaneseUI {
+                    SectionLabel(text: "More Apps").padding(.top, 20)
+                    OtherAppsCard(theme: theme).padding(.top, 8)
+                }
 
                 SectionLabel(text: "About").padding(.top, 20)
                 infoCard.padding(.top, 8)
