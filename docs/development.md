@@ -88,8 +88,9 @@ Xcode の General → Display Name(= `INFOPLIST_KEY_CFBundleDisplayName`)で設�
 ### Info.plist が必要な理由と、同期グループの例外
 
 `GENERATE_INFOPLIST_FILE = YES` なので Info.plist は基本的に自動生成されるが、
-**`UIBackgroundModes` / `GADApplicationIdentifier`(AdMob のアプリ ID)/
-`SKAdNetworkItems` には対応する `INFOPLIST_KEY_*` が存在しない**。そのため
+**`UIBackgroundModes` / `CFBundleLocalizations`(対応言語)/
+`GADApplicationIdentifier`(AdMob のアプリ ID)/ `SKAdNetworkItems` には対応する
+`INFOPLIST_KEY_*` が存在しない**。そのため
 `metronome/Info.plist` にこれらだけを書き、`INFOPLIST_FILE` で指定している
 (Xcode が自動生成分をこのファイルにマージする)。`SKAdNetworkItems` は
 Google の推奨リストで、英単語帳の Info.plist と同じもの。
