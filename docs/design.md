@@ -156,6 +156,20 @@
 - ライト固定。`.preferredColorScheme(.light)` に加えて Info.plist の
   `UIUserInterfaceStyle = Light` も設定する(システムのシート・アラートまで効かせるため)
 
+## ローカライズ
+
+- **ソース言語は英語、訳は日本語だけ。** 文字列は `Localizable.xcstrings`、表示名と
+  ATT の文言は `InfoPlist.xcstrings`(ビルド設定の `INFOPLIST_KEY_*` は英語)。
+  未対応の言語の端末には英語が出る
+- **コードには英語を書き、日本語はカタログに入れる。** Xcode がビルド時に抽出するのは
+  `LocalizedStringKey` と `String(localized:)` のリテラルだけなので、自前部品の文言の引数は
+  `LocalizedStringKey` で受け、ビュー以外(`Models/`・Store・課金)で作る文言は
+  `String(localized:)` にする。`String` で受けると抽出も翻訳もされない
+- **訳さないもの**: ログ(`Diagnostics`)、テンポ標語、`BPM` / `TAP` / `START` / `STOP` / `Pro`
+  (カタログで翻訳対象外にしてある)
+- **「作者の他のアプリ」は日本語表示のときだけ出す。** 紹介先が日本語のみのアプリのため。
+  カード内の文言はカタログに載せず `verbatim` で書く
+
 ## 広告
 
 - **差し込み口は `RootView.screen(_:)` の 1 か所。** 各タブの中身へ
