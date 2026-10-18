@@ -98,17 +98,17 @@ final class PurchaseModel {
         do {
             guard let package = try await lifetimePackage() else {
                 Diagnostics.purchases("買い切りの商品が offering に見つかりません")
-                showMessage(purchase: "購入できませんでした")
+                showMessage(purchase: String(localized: "Purchase failed"))
                 return
             }
             let result = try await Purchases.shared.purchase(package: package)
             // ダイアログを閉じただけなので何も出さない
             if result.userCancelled { return }
             apply(result.customerInfo)
-            if !isPro { showMessage(purchase: "購入できませんでした") }
+            if !isPro { showMessage(purchase: String(localized: "Purchase failed")) }
         } catch {
             Diagnostics.purchases("購入に失敗: \(error.localizedDescription)")
-            showMessage(purchase: "購入できませんでした")
+            showMessage(purchase: String(localized: "Purchase failed"))
         }
     }
 
@@ -119,16 +119,16 @@ final class PurchaseModel {
     func restore() async {
         guard isAvailable, !isRestoring else { return }
         isRestoring = true
-        restoreMessage = "確認中…"
+        restoreMessage = String(localized: "Checking…")
         defer { isRestoring = false }
 
         do {
             let info = try await Purchases.shared.restorePurchases()
             apply(info)
-            showMessage(restore: isPro ? "復元しました" : "購入履歴が見つかりません")
+            showMessage(restore: isPro ? String(localized: "Restored") : String(localized: "No purchases found"))
         } catch {
             Diagnostics.purchases("復元に失敗: \(error.localizedDescription)")
-            showMessage(restore: "復元できませんでした")
+            showMessage(restore: String(localized: "Couldn't restore"))
         }
     }
 

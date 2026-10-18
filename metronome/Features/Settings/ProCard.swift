@@ -14,7 +14,7 @@ struct ProCard: View {
             VStack(spacing: 0) {
                 purchaseRow
                 Hairline()
-                SettingRow(title: "購入を復元",
+                SettingRow(title: "Restore Purchases",
                            action: purchases.isRestoring ? nil : {
                                Task { await purchases.restore() }
                            }) {
@@ -36,7 +36,7 @@ struct ProCard: View {
     private var purchaseRow: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("広告を非表示にする")
+                Text("Remove Ads")
                     .font(.system(size: 16))
                     .kerning(-0.2)
                     .foregroundStyle(Ink.primary)
@@ -54,11 +54,11 @@ struct ProCard: View {
             } label: {
                 ZStack {
                     // 文言を入れ替えても幅が変わらないよう、長いほうで枠を取っておく
-                    Text("購入済み").hidden()
+                    Text("Purchased").hidden()
                     if purchases.isPurchasing {
                         ProgressView().controlSize(.small)
                     } else {
-                        Text(purchases.isPro ? "購入済み" : "購入")
+                        Text(purchases.isPro ? "Purchased" : "Buy")
                     }
                 }
                 .font(.system(size: 13, weight: .semibold))
@@ -70,7 +70,7 @@ struct ProCard: View {
             .buttonStyle(.plain)
             .disabled(!canBuy)
             .opacity(canBuy || purchases.isPro || purchases.isPurchasing ? 1 : 0.5)
-            .accessibilityLabel(purchases.isPro ? "購入済み" : "広告を非表示にするを購入")
+            .accessibilityLabel(purchases.isPro ? "Purchased" : "Buy Remove Ads")
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 11)
@@ -82,8 +82,8 @@ struct ProCard: View {
     }
 
     private var statusText: String {
-        if purchases.isPro { return "Pro を購入済みです" }
-        guard let price = purchases.priceText else { return "価格を取得できませんでした" }
-        return "買い切り \(price)"
+        if purchases.isPro { return String(localized: "You own Pro") }
+        guard let price = purchases.priceText else { return String(localized: "Couldn't load the price") }
+        return String(localized: "One-time purchase \(price)")
     }
 }

@@ -18,7 +18,7 @@ struct BeatDotsView: View {
         }
         .frame(height: 20)
         .accessibilityElement()
-        .accessibilityLabel("\(store.accents.count) 拍")
+        .accessibilityLabel("\(store.accents.count) beats")
     }
 
     private func color(for accent: AccentLevel, isCurrent: Bool) -> Color {

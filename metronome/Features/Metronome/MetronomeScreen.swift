@@ -30,15 +30,15 @@ struct MetronomeScreen: View {
             .padding(.horizontal, 16)
             .padding(.top, 10)
         }
-        .alert("テンポ", isPresented: $isEditingBpm) {
+        .alert("Tempo", isPresented: $isEditingBpm) {
             TextField("BPM", text: $bpmInput)
                 .keyboardType(.numberPad)
-            Button("キャンセル", role: .cancel) {}
-            Button("決定") {
+            Button("Cancel", role: .cancel) {}
+            Button("OK") {
                 if let value = Int(bpmInput) { store.setBpm(value) }
             }
         } message: {
-            Text("\(Tempo.range.lowerBound)〜\(Tempo.range.upperBound) の範囲で入力してください")
+            Text("Enter a value from \(Tempo.range.lowerBound) to \(Tempo.range.upperBound).")
         }
     }
 
@@ -49,7 +49,7 @@ struct MetronomeScreen: View {
         // 中央揃えで、2 行ぶんの中央 = 見出しと副題の隙間の高さに来てしまう。
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("メトロノーム")
+                Text("Metronome")
                     .font(.system(size: 22, weight: .bold))
                     .kerning(-0.4)
                     .foregroundStyle(Ink.primary)
@@ -62,7 +62,7 @@ struct MetronomeScreen: View {
                     NoteGlyph(subdivision: store.subdivision, color: Ink.muted, scale: 0.7, align: .ink)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(store.signatureLabel) 拍子、\(store.subdivision.label)")
+                .accessibilityLabel("\(store.signatureLabel) time, \(store.subdivision.label)")
             }
             Spacer()
             Text(store.tempoTerm)
@@ -83,17 +83,17 @@ struct MetronomeScreen: View {
         return GlassCard(radius: 28, padding: 18) {
             VStack(spacing: 14) {
                 HStack {
-                    stepper("−", delta: -1, label: "テンポを下げる")
+                    stepper("−", delta: -1, label: "Decrease tempo")
                     Spacer()
                     bpmReadout
                     Spacer()
-                    stepper("＋", delta: 1, label: "テンポを上げる")
+                    stepper("＋", delta: 1, label: "Increase tempo")
                 }
                 TrackSlider(
                     value: Binding(get: { Double(store.bpm) },
                                    set: { store.setBpm(Int($0.rounded())) }),
                     range: Tempo.sliderRange,
-                    label: "テンポ",
+                    label: "Tempo",
                     valueText: { "\(Int($0)) BPM" },
                     fill: LinearGradient(colors: [theme.light, theme.accent],
                                          startPoint: .leading, endPoint: .trailing)
@@ -121,10 +121,10 @@ struct MetronomeScreen: View {
             }
         }
         .buttonStyle(PressScale())
-        .accessibilityLabel("テンポ \(store.bpm) BPM。タップで直接入力")
+        .accessibilityLabel("Tempo \(store.bpm) BPM. Tap to enter a value.")
     }
 
-    private func stepper(_ glyph: String, delta: Int, label: String) -> some View {
+    private func stepper(_ glyph: String, delta: Int, label: LocalizedStringKey) -> some View {
         Button {
             store.nudgeBpm(delta)
         } label: {
@@ -174,7 +174,7 @@ struct MetronomeScreen: View {
                 .liquidGlass(cornerRadius: 22, role: .control)
         }
         .buttonStyle(PressScale())
-        .accessibilityLabel("タップテンポ")
+        .accessibilityLabel("Tap tempo")
     }
 
     private var playButton: some View {

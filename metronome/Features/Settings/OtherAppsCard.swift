@@ -1,6 +1,9 @@
 import SwiftUI
 
 /// 作者の他のアプリ。
+///
+/// 紹介しているアプリが日本語のみなので、日本語表示のときだけ出す(`SettingsScreen`)。
+/// 文言も日本語でしか出ないため、カタログに載せず `verbatim` で書く。
 struct OtherAppsCard: View {
     let theme: Theme
     @Environment(\.openURL) private var openURL
@@ -56,8 +59,10 @@ struct OtherAppsCard: View {
 
             Spacer(minLength: 8)
 
-            Button("入手") {
+            Button {
                 openURL(app.url)
+            } label: {
+                Text(verbatim: "入手")
             }
             .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(theme.deep)
@@ -65,7 +70,7 @@ struct OtherAppsCard: View {
             .padding(.vertical, 7)
             .background(Capsule().fill(Ink.inertFill))
             .buttonStyle(.plain)
-            .accessibilityLabel("\(app.name) を App Store で開く")
+            .accessibilityLabel(Text(verbatim: "\(app.name) を App Store で開く"))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 11)

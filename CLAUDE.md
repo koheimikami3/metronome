@@ -7,10 +7,10 @@
 
 iPhone 向けメトロノームアプリ。SwiftUI + Liquid Glass ベース。
 
-- バンドル ID: `com.kohei.mikami.metronome` / ホーム画面の表示名: `メトロノーム`
+- バンドル ID: `com.kohei.mikami.metronome` / ホーム画面の表示名: `Metronome`(日本語: `メトロノーム`)
 - 機能要件: `docs/requirements.md`(何を作るか。実装前に該当節を読む)
 - 確定済みの設計判断: `docs/design.md`(常時は読み込まない。**オーディオ・ガラス表現・
-  広告 / 課金・レビュー・アイコン**に手を入れる前に該当節を読むこと)。
+  広告 / 課金・レビュー・アイコン・画面の文言(ローカライズ)**に手を入れる前に該当節を読むこと)。
   追記するときは同ファイル冒頭の「書き方」に従い、溜め込まない
 - ディレクトリ構成・Xcode 設定・コマンド・タイミング検証手順: `docs/development.md`
 - ストアに掲載したリリースノートの控え: `docs/release-notes.md`(提出のたびに追記)

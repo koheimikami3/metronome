@@ -78,17 +78,19 @@ Riverpod の `select` が自動で効く感覚に近い。旧来の `ObservableO
 | `INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone` | `UIInterfaceOrientationPortrait` | 縦のみ。iPad 用の設定は削除済み |
 | `INFOPLIST_KEY_UIUserInterfaceStyle` | `Light` | システムのシート・アラートまでライトにする |
 | `INFOPLIST_FILE` | `metronome/Info.plist` | `INFOPLIST_KEY_*` の無いキーのために置く(後述) |
-| `INFOPLIST_KEY_NSUserTrackingUsageDescription` | 広告の説明文 | ATT ダイアログの本文。英単語帳と同じ文言 |
-| `MARKETING_VERSION` | `1.3.0` | `docs/release-notes.md` の表記に合わせる |
+| `INFOPLIST_KEY_NSUserTrackingUsageDescription` | 広告の説明文(英語) | ATT ダイアログの本文。日本語は `InfoPlist.xcstrings` にあり、英単語帳と同じ文言 |
+| `MARKETING_VERSION` | `1.4.0` | `docs/release-notes.md` の表記に合わせる |
 
-ホーム画面の表示名 `メトロノーム` は、Assets の `CFBundleDisplayName` ではなく
+ホーム画面の表示名 `Metronome` は、Assets の `CFBundleDisplayName` ではなく
 Xcode の General → Display Name(= `INFOPLIST_KEY_CFBundleDisplayName`)で設定する。
+日本語の `メトロノーム` は `InfoPlist.xcstrings` に入っている。
 
 ### Info.plist が必要な理由と、同期グループの例外
 
 `GENERATE_INFOPLIST_FILE = YES` なので Info.plist は基本的に自動生成されるが、
-**`UIBackgroundModes` / `GADApplicationIdentifier`(AdMob のアプリ ID)/
-`SKAdNetworkItems` には対応する `INFOPLIST_KEY_*` が存在しない**。そのため
+**`UIBackgroundModes` / `CFBundleLocalizations`(対応言語)/
+`GADApplicationIdentifier`(AdMob のアプリ ID)/ `SKAdNetworkItems` には対応する
+`INFOPLIST_KEY_*` が存在しない**。そのため
 `metronome/Info.plist` にこれらだけを書き、`INFOPLIST_FILE` で指定している
 (Xcode が自動生成分をこのファイルにマージする)。`SKAdNetworkItems` は
 Google の推奨リストで、英単語帳の Info.plist と同じもの。

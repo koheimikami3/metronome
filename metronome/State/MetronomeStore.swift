@@ -180,16 +180,16 @@ final class MetronomeStore {
 
     var numeratorCaption: String {
         switch denominator {
-        case 4: "1小節の拍数"
-        case 8: "1小節の8分音符数"
-        default: "1小節の16分音符数"
+        case 4: String(localized: "Beats per bar")
+        case 8: String(localized: "Eighth notes per bar")
+        default: String(localized: "Sixteenth notes per bar")
         }
     }
 
     /// 複合拍子のときだけ出す補足。単純拍子では「分子 = 拍数」で、分子チップと
     /// 見出しがすでに言っていることの繰り返しにしかならないので出さない。
     var compoundCaption: String? {
-        group == 3 ? "\(beatCount) 拍 / 小節(3つずつ)" : nil
+        group == 3 ? String(localized: "\(beatCount) beats per bar (in 3s)") : nil
     }
 
     // MARK: - 操作

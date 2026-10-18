@@ -11,7 +11,7 @@ struct TrackSlider: View {
     var range: ClosedRange<Double>
     /// VoiceOver の 1 回の上下で動く量
     var step: Double = 1
-    var label: String
+    var label: LocalizedStringKey
     var valueText: (Double) -> String
     var height: CGFloat = 12
     var knob: CGFloat = 26

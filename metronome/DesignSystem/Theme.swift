@@ -42,25 +42,25 @@ struct Theme: Identifiable, Equatable, Sendable {
     }
 
     static let all: [Theme] = [
-        Theme(key: "taupe", name: "トープ", accent: Color(hex: "A08170"), light: Color(hex: "C0A596"), deep: Color(hex: "7E6153"),
+        Theme(key: "taupe", name: String(localized: "Taupe"), accent: Color(hex: "A08170"), light: Color(hex: "C0A596"), deep: Color(hex: "7E6153"),
               ground: Color(hex: "F5F3F0"), bloom1: rgba(160, 129, 112, 0.32), bloom2: rgba(150, 160, 170, 0.24)),
-        Theme(key: "caramel", name: "キャラメル", accent: Color(hex: "B98A5E"), light: Color(hex: "D8B288"), deep: Color(hex: "97683F"),
+        Theme(key: "caramel", name: String(localized: "Caramel"), accent: Color(hex: "B98A5E"), light: Color(hex: "D8B288"), deep: Color(hex: "97683F"),
               ground: Color(hex: "F9F4EC"), bloom1: rgba(196, 152, 104, 0.38), bloom2: rgba(190, 178, 158, 0.32)),
-        Theme(key: "apricot", name: "ソフトアプリコット", accent: Color(hex: "E3945E"), light: Color(hex: "F2BA8C"), deep: Color(hex: "C87C46"),
+        Theme(key: "apricot", name: String(localized: "Soft Apricot"), accent: Color(hex: "E3945E"), light: Color(hex: "F2BA8C"), deep: Color(hex: "C87C46"),
               ground: Color(hex: "F8F3ED"), bloom1: rgba(227, 154, 98, 0.36), bloom2: rgba(200, 180, 160, 0.30)),
-        Theme(key: "sage", name: "セージグリーン", accent: Color(hex: "8AAE93"), light: Color(hex: "AECBB4"), deep: Color(hex: "5E8469"),
+        Theme(key: "sage", name: String(localized: "Sage Green"), accent: Color(hex: "8AAE93"), light: Color(hex: "AECBB4"), deep: Color(hex: "5E8469"),
               ground: Color(hex: "F2F4EF"), bloom1: rgba(138, 174, 147, 0.38), bloom2: rgba(214, 190, 150, 0.28)),
-        Theme(key: "teal", name: "ダスティティール", accent: Color(hex: "6FA7A2"), light: Color(hex: "9BC7C2"), deep: Color(hex: "4F8783"),
+        Theme(key: "teal", name: String(localized: "Dusty Teal"), accent: Color(hex: "6FA7A2"), light: Color(hex: "9BC7C2"), deep: Color(hex: "4F8783"),
               ground: Color(hex: "F1F5F3"), bloom1: rgba(127, 179, 174, 0.40), bloom2: rgba(196, 182, 160, 0.28)),
-        Theme(key: "blue", name: "ダスティブルー", accent: Color(hex: "7E9CC0"), light: Color(hex: "A8C0DA"), deep: Color(hex: "587DA6"),
+        Theme(key: "blue", name: String(localized: "Dusty Blue"), accent: Color(hex: "7E9CC0"), light: Color(hex: "A8C0DA"), deep: Color(hex: "587DA6"),
               ground: Color(hex: "F1F4F7"), bloom1: rgba(126, 156, 192, 0.36), bloom2: rgba(196, 186, 170, 0.24)),
-        Theme(key: "periwinkle", name: "ペリウィンクル", accent: Color(hex: "8E8FC4"), light: Color(hex: "B3B4DE"), deep: Color(hex: "6A6BA8"),
+        Theme(key: "periwinkle", name: String(localized: "Periwinkle"), accent: Color(hex: "8E8FC4"), light: Color(hex: "B3B4DE"), deep: Color(hex: "6A6BA8"),
               ground: Color(hex: "F3F2F7"), bloom1: rgba(142, 143, 196, 0.34), bloom2: rgba(190, 178, 160, 0.22)),
-        Theme(key: "brick", name: "ブリックレッド", accent: Color(hex: "C0705E"), light: Color(hex: "DE9C8C"), deep: Color(hex: "9B4E3E"),
+        Theme(key: "brick", name: String(localized: "Brick Red"), accent: Color(hex: "C0705E"), light: Color(hex: "DE9C8C"), deep: Color(hex: "9B4E3E"),
               ground: Color(hex: "F8F1EE"), bloom1: rgba(192, 112, 94, 0.34), bloom2: rgba(200, 180, 162, 0.26)),
-        Theme(key: "rose", name: "ダスティローズ", accent: Color(hex: "C4808A"), light: Color(hex: "DFA8B0"), deep: Color(hex: "9E5A66"),
+        Theme(key: "rose", name: String(localized: "Dusty Rose"), accent: Color(hex: "C4808A"), light: Color(hex: "DFA8B0"), deep: Color(hex: "9E5A66"),
               ground: Color(hex: "F8F1F2"), bloom1: rgba(196, 128, 138, 0.32), bloom2: rgba(196, 184, 168, 0.24)),
-        Theme(key: "charcoal", name: "チャコール", accent: Color(hex: "6E6862"), light: Color(hex: "9A938C"), deep: Color(hex: "43403B"),
+        Theme(key: "charcoal", name: String(localized: "Charcoal"), accent: Color(hex: "6E6862"), light: Color(hex: "9A938C"), deep: Color(hex: "43403B"),
               ground: Color(hex: "F4F3F1"), bloom1: rgba(110, 104, 98, 0.30), bloom2: rgba(170, 164, 156, 0.26))
     ]
 

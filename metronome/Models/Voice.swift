@@ -11,21 +11,22 @@ enum Voice: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    /// 設定画面のグリッドは 3 列なので、**4 文字以内**に収める。
+    /// 設定画面のグリッドは 3 列なので、日本語は **4 文字以内**、
+    /// 英語は **8 文字以内**(Marimba / Cowbell 程度)に収める。
     var label: String {
         switch self {
-        case .mech: "メトロ1"
-        case .tick: "メトロ2"
-        case .click: "クリック"
-        case .digital: "デジタル"
-        case .beep: "ビープ"
-        case .rim: "リム"
-        case .wood: "ウッド"
-        case .claves: "クラベス"
-        case .marimba: "マリンバ"
-        case .bell: "ベル"
-        case .cow: "カウベル"
-        case .hat: "ハット"
+        case .mech: String(localized: "Metro 1")
+        case .tick: String(localized: "Metro 2")
+        case .click: String(localized: "Click")
+        case .digital: String(localized: "Digital")
+        case .beep: String(localized: "Beep")
+        case .rim: String(localized: "Rim")
+        case .wood: String(localized: "Wood")
+        case .claves: String(localized: "Claves")
+        case .marimba: String(localized: "Marimba")
+        case .bell: String(localized: "Bell")
+        case .cow: String(localized: "Cowbell")
+        case .hat: String(localized: "Hi-Hat")
         }
     }
 

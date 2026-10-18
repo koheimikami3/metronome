@@ -21,9 +21,9 @@ enum TimeSignature {
 
     static func label(denominator: Int) -> String {
         switch denominator {
-        case 4: "4分"
-        case 8: "8分"
-        default: "16分"
+        case 4: String(localized: "Quarter")
+        case 8: String(localized: "Eighth")
+        default: String(localized: "Sixteenth")
         }
     }
 }

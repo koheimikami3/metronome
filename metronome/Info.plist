@@ -9,6 +9,15 @@
 		<string>audio</string>
 	</array>
 
+	<!-- 対応言語の宣言。ソース言語の英語は String Catalog から en.lproj が
+	     作られないため、書かないとバンドルの対応言語が日本語だけに見える
+	     (App Store の言語表示や、端末の言語からの選択がずれる)。 -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ja</string>
+	</array>
+
 	<!-- 暗号化は一切使っていない。入れておくと、アップロードのたびに
 	     輸出コンプライアンスを聞かれるのを省ける。 -->
 	<key>ITSAppUsesNonExemptEncryption</key>

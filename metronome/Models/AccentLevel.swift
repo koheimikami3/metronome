@@ -12,9 +12,9 @@ enum AccentLevel: Int, CaseIterable, Sendable {
 
     var label: String {
         switch self {
-        case .rest: "休"
-        case .weak: "弱"
-        case .strong: "強"
+        case .rest: String(localized: "Rest")
+        case .weak: String(localized: "Weak")
+        case .strong: String(localized: "Strong")
         }
     }
 }
