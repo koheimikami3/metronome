@@ -143,6 +143,7 @@ Xcode は選んだ場所の中にもう 1 段フォルダを作るので、作�
 | SKU | `com.kohei.mikami.metronome` | **変更不可** |
 | バンドルID | `com.kohei.mikami.metronome` | 初回ビルドのアップロード後は変更不可 |
 | 掲載名 | `メトロノーム - 拍子・テンポ・BPM` | 30 文字上限。新バージョンの審査と一緒になら変更できる |
+| 掲載名(英語(米国)) | `Metronome: Time Signature, BPM` | 1.4.0 から。プライマリ言語は英語(米国) |
 | カテゴリ | ミュージック | ビルド設定の `INFOPLIST_KEY_LSApplicationCategoryType`(`public.app-category.music`)。Xcode の General → App Category と同じもの |
 
 掲載名は検索を意識して決めている。上位 2 本(Gismart / Yamaha)の日本語名に
@@ -150,6 +151,9 @@ Xcode は選んだ場所の中にもう 1 段フォルダを作るので、作�
 名前 + サブタイトル + キーワード欄の 3 枠で、**同じ語を重複させても加点されない**ため、
 サブタイトルとキーワード欄には名前に出てこない語(タップテンポ・アクセント・連符、
 楽器名など)を入れる。
+
+英語名も同じ考え方で、米国の上位アプリの名前に無い「Time Signature」と「BPM」を取っている。
+30 文字に収まらない「Tempo」はサブタイトル(`Tap Tempo for Drums & Guitar`)で拾う。
 
 ### 提出のために置いてあるもの
 
