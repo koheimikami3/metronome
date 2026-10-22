@@ -14,7 +14,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     /// スケジューラが参照する設定。まとめて差し替える。
     struct Settings: Sendable, Equatable {
-        var bpm: Double = 112
+        var bpm: Double = 120
         var beatCount: Int = 4
         /// 1 拍あたりの発音数(分割)
         var pulsesPerBeat: Int = 1
@@ -48,6 +48,8 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private let accentPlayers: [AVAudioPlayerNode]
     /// 音色プレビュー・タップテンポ用。予約列に割り込ませたいので分ける。
     private let previewPlayer = AVAudioPlayerNode()
+    /// グラフに繋ぐ・動かし直すときに全部まとめて扱う
+    private var allPlayers: [AVAudioPlayerNode] { clickPlayers + accentPlayers + [previewPlayer] }
 
     private let format: AVAudioFormat
     private var clickBuffers: [String: AVAudioPCMBuffer] = [:]
@@ -92,7 +94,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         self.accentPlayers = (0..<3).map { _ in AVAudioPlayerNode() }
 
         engine.attach(mixer)
-        for player in clickPlayers + accentPlayers + [previewPlayer] {
+        for player in allPlayers {
             engine.attach(player)
             engine.connect(player, to: mixer, format: format)
         }
@@ -283,7 +285,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         }
 
         guard restarted else {
-            for player in clickPlayers + accentPlayers + [previewPlayer] where !player.isPlaying {
+            for player in allPlayers where !player.isPlaying {
                 player.play()
             }
             return
@@ -294,7 +296,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         // play() を省くと前の走行の対応が残り、`playerTime(forNodeTime:)` が
         // ずれた時刻を返す。予約が遥か先へ飛んで、**拍だけ進んで無音**になる
         // (起動 → 背面 → 前面 → START で実際に起きていた)。
-        for player in clickPlayers + accentPlayers + [previewPlayer] {
+        for player in allPlayers {
             player.stop()
             player.play()
         }
