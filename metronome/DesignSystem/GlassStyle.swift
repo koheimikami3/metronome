@@ -13,35 +13,26 @@ enum GlassRole {
     case card       // 通常のカード・行
     case control    // タップできる小さめの面(ボタン、TAP、チップ)
     case bar        // 浮いている帯(広告バーなど)
-    case accent     // 差し色を帯びた面
 }
 
 extension View {
     /// ガラス面。`shape` に角丸などの形をそのまま渡す。
     func liquidGlass(_ shape: some InsettableShape,
-                     role: GlassRole = .card,
-                     tint: Color? = nil) -> some View {
-        modifier(LiquidGlass(shape: shape, role: role, tint: tint))
+                     role: GlassRole = .card) -> some View {
+        modifier(LiquidGlass(shape: shape, role: role))
     }
 
     /// 角丸長方形のショートハンド
     func liquidGlass(cornerRadius: CGFloat,
-                     role: GlassRole = .card,
-                     tint: Color? = nil) -> some View {
+                     role: GlassRole = .card) -> some View {
         liquidGlass(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
-                    role: role, tint: tint)
-    }
-
-    func liquidGlassCapsule(role: GlassRole = .bar,
-                            tint: Color? = nil) -> some View {
-        liquidGlass(Capsule(), role: role, tint: tint)
+                    role: role)
     }
 }
 
 private struct LiquidGlass<S: InsettableShape>: ViewModifier {
     let shape: S
     let role: GlassRole
-    let tint: Color?
 
     func body(content: Content) -> some View {
         glass(content).contentShape(shape)
@@ -52,7 +43,7 @@ private struct LiquidGlass<S: InsettableShape>: ViewModifier {
         if #available(iOS 26.0, *) {
             content.glassEffect(modern, in: shape)
         } else {
-            content.modifier(LegacyGlass(shape: shape, role: role, tint: tint))
+            content.modifier(LegacyGlass(shape: shape, role: role))
         }
     }
 
@@ -73,9 +64,7 @@ private struct LiquidGlass<S: InsettableShape>: ViewModifier {
     @available(iOS 26.0, *)
     private var modern: Glass {
         // control は透過の強い .clear、それ以外は .regular
-        var glass: Glass = role == .control ? .clear : .regular
-        if let tint { glass = glass.tint(tint) }
-        return glass
+        role == .control ? .clear : .regular
     }
 }
 
@@ -84,14 +73,12 @@ private struct LiquidGlass<S: InsettableShape>: ViewModifier {
 private struct LegacyGlass<S: InsettableShape>: ViewModifier {
     let shape: S
     let role: GlassRole
-    let tint: Color?
 
     private var fill: Color {
         let opacity: Double = switch role {
         case .card: 0.55
         case .control: 0.50
         case .bar: 0.60
-        case .accent: 0.62
         }
         return Color(.sRGB, red: 1, green: 0.992, blue: 0.976, opacity: opacity)
     }
@@ -104,7 +91,6 @@ private struct LegacyGlass<S: InsettableShape>: ViewModifier {
             shape
                 .fill(.ultraThinMaterial)
                 .overlay { shape.fill(fill) }
-                .overlay { if let tint { shape.fill(tint.opacity(0.18)) } }
                 // リム: inset shadow の代わりに、上辺が明るい縁取りを重ねる
                 .overlay {
                     shape.strokeBorder(
@@ -113,22 +99,7 @@ private struct LegacyGlass<S: InsettableShape>: ViewModifier {
                         lineWidth: 0.9
                     )
                 }
-                .overlay { if let tint { shape.strokeBorder(tint, lineWidth: 1) } }
                 .shadow(color: Ink.shadow, radius: shadowRadius, x: 0, y: shadowY)
-        }
-    }
-}
-
-/// 近接したガラス面を溶け合わせるコンテナ。iOS 25 以前は素通し。
-struct GlassGroup<Content: View>: View {
-    var spacing: CGFloat = 16
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        if #available(iOS 26.0, *) {
-            GlassEffectContainer(spacing: spacing) { content }
-        } else {
-            content
         }
     }
 }
