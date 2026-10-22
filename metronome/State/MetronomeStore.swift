@@ -222,10 +222,7 @@ final class MetronomeStore {
 
     /// 画面を再生中の状態にする。START と、割り込み明けの自動再開で共通。
     private func beginRunning() {
-        pendingBeats.removeAll()
-        beatsSinceStart = 0
-        step = -1
-        currentBeatStartedAt = nil
+        resetBeatState()
         startedAt = Date()
         isRunning = true
         startDisplayLink()
@@ -250,12 +247,17 @@ final class MetronomeStore {
     private func handleEngineStopped() {
         displayLink?.stop()
         displayLink = nil
-        pendingBeats.removeAll()
+        resetBeatState()
         isRunning = false
+        startedAt = nil
+    }
+
+    /// 拍の消化まわりを「まだ 1 拍も鳴っていない」状態に戻す
+    private func resetBeatState() {
+        pendingBeats.removeAll()
         beatsSinceStart = 0
         step = -1
         currentBeatStartedAt = nil
-        startedAt = nil
     }
 
     func nudgeBpm(_ delta: Int) {
@@ -392,7 +394,9 @@ final class MetronomeStore {
         defaults.set(volume, forKey: Key.volume)
     }
 
-    /// 保存値の読み戻し。`didSet` を通さずに入れたいので、検証してから直接代入する。
+    /// 保存値の読み戻し。範囲外や今の拍子と合わない値は捨て、検証してから代入する。
+    /// 代入は didSet・セッターを通るので、エンジンへの反映と保存の予約も一緒に走る
+    /// (読み戻した値を書き戻すだけなので害は無い)。
     private func load() {
         if let stored = defaults.object(forKey: Key.bpm) as? Int {
             setBpm(stored)
