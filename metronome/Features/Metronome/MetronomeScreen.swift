@@ -49,10 +49,7 @@ struct MetronomeScreen: View {
         // 中央揃えで、2 行ぶんの中央 = 見出しと副題の隙間の高さに来てしまう。
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Metronome")
-                    .font(.system(size: 22, weight: .bold))
-                    .kerning(-0.4)
-                    .foregroundStyle(Ink.primary)
+                ScreenTitle(text: "Metronome")
                 // 分割は「8分」と書くより音符の絵のほうが早く読める。
                 // 拍子画面のチップと同じ絵なので、どれを選んでいるかが一目で繋がる。
                 HStack(spacing: 6) {

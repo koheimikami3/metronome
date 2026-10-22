@@ -23,10 +23,7 @@ struct SettingsScreen: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                Text("Settings")
-                    .font(.system(size: 22, weight: .bold))
-                    .kerning(-0.4)
-                    .foregroundStyle(Ink.primary)
+                ScreenTitle(text: "Settings")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 10)
 

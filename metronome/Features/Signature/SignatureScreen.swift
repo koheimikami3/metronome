@@ -31,10 +31,7 @@ struct SignatureScreen: View {
 
     private var header: some View {
         HStack {
-            Text("Time Signature")
-                .font(.system(size: 22, weight: .bold))
-                .kerning(-0.4)
-                .foregroundStyle(Ink.primary)
+            ScreenTitle(text: "Time Signature")
             Spacer()
             // 見出しと同じ 22pt。右端の拍子は見出しと対になる情報なので、
             // 小さくすると「おまけ」に見えてしまう。
@@ -182,20 +179,17 @@ struct SignatureScreen: View {
                 HStack(spacing: 8) {
                     ForEach(Array(store.subdivisionOptions.enumerated()), id: \.offset) { index, subdivision in
                         let isSelected = store.subdivisionIndex == index
-                        Button {
+                        SelectableChip(isSelected: isSelected,
+                                       theme: theme,
+                                       cornerRadius: 16,
+                                       minHeight: 58) {
                             store.setSubdivisionIndex(index)
                             Haptics.soft()
                         } label: {
+                            // 音符は文字ではないので foregroundStyle が効かない。色は直に渡す
                             NoteGlyph(subdivision: subdivision, color: isSelected ? .white : Ink.secondary)
-                                .frame(maxWidth: .infinity, minHeight: 58)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(isSelected ? AnyShapeStyle(theme.deep) : AnyShapeStyle(Ink.inertFill))
-                                )
                         }
-                        .buttonStyle(PressScale())
                         .accessibilityLabel(subdivision.label)
-                        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                     }
                 }
             }
