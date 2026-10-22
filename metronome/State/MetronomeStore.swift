@@ -34,6 +34,11 @@ final class MetronomeStore {
     var numerator = 4 {
         didSet {
             guard numerator != oldValue else { return }
+            // 単純 ↔ 複合をまたぐと分割の選択肢ごと変わる(3/8 の 3 連符が 6/8 の 16 分に
+            // すり替わる)ので、分母を変えたときと同じく先頭に戻す
+            if TimeSignature.group(numerator: oldValue, denominator: denominator) != group {
+                setSubdivisionIndex(0)
+            }
             normalizeAccents()
             syncEngine()
             schedulePersist()
