@@ -137,7 +137,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             onInterruptionBegan: { [weak self] in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("interruption began (running: \(self.isRunning))")
                     self.wasRunningBeforeInterruption = self.isRunning
                     if self.isRunning { self.stopLocked(notify: true) }
                 }
@@ -145,7 +144,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             onInterruptionEnded: { [weak self] shouldResume in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("interruption ended (shouldResume: \(shouldResume))")
                     self.configureSession()
                     // 鳴らしていなくても動かし直す。止まったままだと、
                     // 次に鳴らすときに冷えた状態から起こすことになる。
@@ -163,7 +161,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             onConfigurationChanged: { [weak self] in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("configuration changed (running: \(self.isRunning), engine: \(self.engine.isRunning))")
                     // 出力先が変わるとエンジンの接続もレイテンシも作り直しになる。
                     // 鳴っていたなら、張り直して同じ位相から鳴らし直す。
                     let resume = self.isRunning
@@ -179,7 +176,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             onBecameActive: { [weak self] in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("became active (running: \(self.isRunning), engine: \(self.engine.isRunning))")
                     self.configureSession()
                     self.ensureEngineRunning()
                 }
@@ -187,7 +183,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             onEnteredBackground: { [weak self] in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("entered background (running: \(self.isRunning), engine: \(self.engine.isRunning))")
                     // 鳴っている最中は触らない(バックグラウンド再生を続ける)。
                     // 止まっているなら手を引く。空回しのまま背面に居座ると
                     // アプリが休止できず、電池を使い続ける。
@@ -196,7 +191,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                     // 止めた時点で、休止を妨げているのはそちらだけ。
                     // setActive(false) → setActive(true) の往復を挟むと、
                     // 次に背面へ入ったときに音が止まる症状が実機で残っていたので、
-                    // 往復そのものをやめた(効果はまだ実機で確認中)。
+                    // 往復そのものをやめた。
                     self.engine.stop()
                 }
             }
@@ -342,17 +337,8 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     }
 
     /// 25 ms ごとに「lookahead 秒以内に鳴る音」を予約する。
-    /// 心拍ログの間引き。`tickInterval` 0.025 秒 × 80 = 2 秒に 1 行。
-    private var heartbeat = 0
-
     private func tick() {
         guard isRunning, let renderTime = clickPlayers[0].lastRenderTime else { return }
-
-        heartbeat += 1
-        if heartbeat % 80 == 0 {
-            // 背面でレンダリングが止まっていれば sample が進まない
-            Diagnostics.audio("running (engine: \(engine.isRunning), sample: \(renderTime.sampleTime))")
-        }
 
         let sampleRate = format.sampleRate
         if !hasAnchor {

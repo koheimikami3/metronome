@@ -206,7 +206,6 @@ final class MetronomeStore {
     /// 画面はこれでレビュー依頼を出すかを決める(`ReviewPrompter`)。
     @discardableResult
     func toggle() -> TimeInterval? {
-        Diagnostics.toggle(isRunning: isRunning)
         guard isRunning else {
             start()
             return nil
@@ -282,7 +281,6 @@ final class MetronomeStore {
     private var taps: [TimeInterval] = []
 
     func tap() {
-        Diagnostics.tapTempo()
         let now = CACurrentMediaTime()
         taps = taps.filter { now - $0 < 2.4 }
         taps.append(now)
