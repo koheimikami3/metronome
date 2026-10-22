@@ -155,11 +155,7 @@ struct SignatureScreen: View {
                     .fill(fill)
                     .frame(height: height)
                     .overlay(alignment: .bottom) {
-                        // 鳴っている拍に印
-                        Circle()
-                            .fill(.white.opacity(store.step == index ? 0.9 : 0))
-                            .frame(width: 6, height: 6)
-                            .padding(.bottom, 8)
+                        PlayingBeatMark(index: index)
                     }
                 Text(accent.label)
                     .font(.system(size: 11, weight: .medium))
@@ -204,6 +200,22 @@ struct SignatureScreen: View {
                 }
             }
         }
+    }
+}
+
+/// 強弱のバーに付ける「鳴っている拍」の印。
+///
+/// `step` は 1 拍ごとに変わるので、**このビューの中で読む**。画面の body で読むと、
+/// 再生中は拍子画面全体が 1 拍ごとに作り直しになる。
+private struct PlayingBeatMark: View {
+    @Environment(MetronomeStore.self) private var store
+    let index: Int
+
+    var body: some View {
+        Circle()
+            .fill(.white.opacity(store.step == index ? 0.9 : 0))
+            .frame(width: 6, height: 6)
+            .padding(.bottom, 8)
     }
 }
 
