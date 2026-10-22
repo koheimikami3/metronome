@@ -75,6 +75,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     private var beatHandler: (@MainActor @Sendable (_ beat: Int, _ audibleAt: TimeInterval) -> Void)?
     private var stopHandler: (@MainActor @Sendable () -> Void)?
+    private var resumeHandler: (@MainActor @Sendable () -> Void)?
 
     // MARK: - 組み立て
 
@@ -152,6 +153,11 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                     guard shouldResume, self.wasRunningBeforeInterruption else { return }
                     self.wasRunningBeforeInterruption = false
                     self.startLocked()
+                    // 割り込みの頭で UI には停止を伝えてあるので、鳴らし直したことも伝える。
+                    // 伝えないと音は鳴っているのに画面が START のままになる。
+                    if let resumeHandler = self.resumeHandler {
+                        DispatchQueue.main.async { MainActor.assumeIsolated { resumeHandler() } }
+                    }
                 }
             },
             onConfigurationChanged: { [weak self] in
@@ -199,11 +205,14 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     // MARK: - 公開 API(どのスレッドから呼んでもよい)
 
+    /// `onStop` / `onResume` はエンジンが自分で止めた・鳴らし直したとき(割り込み)だけ呼ぶ。
     func setHandlers(onBeat: @escaping @MainActor @Sendable (Int, TimeInterval) -> Void,
-                     onStop: @escaping @MainActor @Sendable () -> Void) {
+                     onStop: @escaping @MainActor @Sendable () -> Void,
+                     onResume: @escaping @MainActor @Sendable () -> Void) {
         queue.async {
             self.beatHandler = onBeat
             self.stopHandler = onStop
+            self.resumeHandler = onResume
         }
     }
 
@@ -224,14 +233,22 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         }
     }
 
+    /// ユーザーが割り込み中に START / STOP を押したら、割り込み明けの自動再開はしない
+    /// (押した結果を上書きしない)。
     func start() {
-        queue.async { self.startLocked() }
+        queue.async {
+            self.wasRunningBeforeInterruption = false
+            self.startLocked()
+        }
     }
 
     /// `notify` は「止まったことを UI に伝えるか」。ユーザー操作で止めたときは
     /// 呼び出し側がすでに知っているので false にする(通知の往復で順序が入れ替わる)。
     func stop(notify: Bool = true) {
-        queue.async { self.stopLocked(notify: notify) }
+        queue.async {
+            self.wasRunningBeforeInterruption = false
+            self.stopLocked(notify: notify)
+        }
     }
 
     /// 単発再生(音色プレビュー・タップテンポ・強弱の編集)。

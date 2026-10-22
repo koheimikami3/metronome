@@ -148,6 +148,9 @@ final class MetronomeStore {
             },
             onStop: { [weak self] in
                 self?.handleEngineStopped()
+            },
+            onResume: { [weak self] in
+                self?.handleEngineResumed()
             }
         )
         engine.setVolume(Float(volume))
@@ -209,13 +212,18 @@ final class MetronomeStore {
     }
 
     private func start() {
+        beginRunning()
+        engine.start()
+    }
+
+    /// 画面を再生中の状態にする。START と、割り込み明けの自動再開で共通。
+    private func beginRunning() {
         pendingBeats.removeAll()
         beatsSinceStart = 0
         step = -1
         currentBeatStartedAt = nil
         startedAt = Date()
         isRunning = true
-        engine.start()
         startDisplayLink()
     }
 
@@ -225,6 +233,13 @@ final class MetronomeStore {
         // 音は鳴っているのに画面が START に戻ってしまう。
         engine.stop(notify: false)
         handleEngineStopped()
+    }
+
+    /// 割り込み明けにエンジンが自分で鳴らし直したとき。
+    /// 練習時間は再開した時点から測り直す(割り込みで止まった回はレビュー依頼に数えない)。
+    private func handleEngineResumed() {
+        guard !isRunning else { return }
+        beginRunning()
     }
 
     /// エンジン側が止まったとき(ユーザー操作・割り込み)の後始末
