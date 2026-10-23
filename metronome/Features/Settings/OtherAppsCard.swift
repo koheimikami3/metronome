@@ -64,11 +64,7 @@ struct OtherAppsCard: View {
             } label: {
                 Text(verbatim: "入手")
             }
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(theme.deep)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 7)
-            .background(Capsule().fill(Ink.inertFill))
+            .capsuleActionStyle(theme: theme)
             .buttonStyle(.plain)
             .accessibilityLabel(Text(verbatim: "\(app.name) を App Store で開く"))
         }

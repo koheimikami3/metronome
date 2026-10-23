@@ -31,10 +31,7 @@ struct SignatureScreen: View {
 
     private var header: some View {
         HStack {
-            Text("Time Signature")
-                .font(.system(size: 22, weight: .bold))
-                .kerning(-0.4)
-                .foregroundStyle(Ink.primary)
+            ScreenTitle(text: "Time Signature")
             Spacer()
             // 見出しと同じ 22pt。右端の拍子は見出しと対になる情報なので、
             // 小さくすると「おまけ」に見えてしまう。
@@ -54,8 +51,7 @@ struct SignatureScreen: View {
                 // 「文 → ボタン → 文」の挟み込みになって読みにくい。
                 HStack(alignment: .firstTextBaseline) {
                     Text(store.numeratorCaption)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.muted)
+                        .captionStyle()
                     Spacer(minLength: 8)
                     if let caption = store.compoundCaption {
                         Text(caption)
@@ -66,12 +62,8 @@ struct SignatureScreen: View {
 
                 HStack(spacing: 8) {
                     ForEach(TimeSignature.numerators(for: store.denominator), id: \.self) { value in
-                        SelectableChip(isSelected: store.numerator == value,
-                                       theme: theme,
-                                       cornerRadius: 15,
-                                       minHeight: 46) {
-                            store.numerator = value
-                            Haptics.soft()
+                        SelectableChip(isSelected: store.numerator == value, theme: theme) {
+                            store.setNumerator(value)
                         } label: {
                             Text("\(value)")
                                 .font(.system(size: 17, weight: .semibold))
@@ -89,17 +81,12 @@ struct SignatureScreen: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Beat unit")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Ink.muted)
+                    .captionStyle()
 
                 HStack(spacing: 8) {
                     ForEach(TimeSignature.denominators, id: \.self) { value in
-                        SelectableChip(isSelected: store.denominator == value,
-                                       theme: theme,
-                                       cornerRadius: 15,
-                                       minHeight: 46) {
-                            store.denominator = value
-                            Haptics.soft()
+                        SelectableChip(isSelected: store.denominator == value, theme: theme) {
+                            store.setDenominator(value)
                         } label: {
                             Text(TimeSignature.label(denominator: value))
                                 .font(.system(size: 15, weight: .medium))
@@ -117,8 +104,7 @@ struct SignatureScreen: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Accents")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.muted)
+                        .captionStyle()
                     Spacer()
                     Button("Reset") { store.resetAccents() }
                         .font(.system(size: 12, weight: .semibold))
@@ -155,11 +141,7 @@ struct SignatureScreen: View {
                     .fill(fill)
                     .frame(height: height)
                     .overlay(alignment: .bottom) {
-                        // 鳴っている拍に印
-                        Circle()
-                            .fill(.white.opacity(store.step == index ? 0.9 : 0))
-                            .frame(width: 6, height: 6)
-                            .padding(.bottom, 8)
+                        PlayingBeatMark(index: index)
                     }
                 Text(accent.label)
                     .font(.system(size: 11, weight: .medium))
@@ -179,27 +161,22 @@ struct SignatureScreen: View {
         GlassCard(padding: 12) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Subdivision")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Ink.muted)
+                    .captionStyle()
                     .padding(.leading, 6)
 
                 HStack(spacing: 8) {
                     ForEach(Array(store.subdivisionOptions.enumerated()), id: \.offset) { index, subdivision in
                         let isSelected = store.subdivisionIndex == index
-                        Button {
+                        SelectableChip(isSelected: isSelected,
+                                       theme: theme,
+                                       cornerRadius: 16,
+                                       minHeight: 58) {
                             store.setSubdivisionIndex(index)
-                            Haptics.soft()
                         } label: {
+                            // 音符は文字ではないので foregroundStyle が効かない。色は直に渡す
                             NoteGlyph(subdivision: subdivision, color: isSelected ? .white : Ink.secondary)
-                                .frame(maxWidth: .infinity, minHeight: 58)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(isSelected ? AnyShapeStyle(theme.deep) : AnyShapeStyle(Ink.inertFill))
-                                )
                         }
-                        .buttonStyle(PressScale())
                         .accessibilityLabel(subdivision.label)
-                        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                     }
                 }
             }
@@ -207,26 +184,18 @@ struct SignatureScreen: View {
     }
 }
 
-/// 拍子画面で繰り返し出てくる「選べる四角いチップ」。
-private struct SelectableChip<Label: View>: View {
-    let isSelected: Bool
-    let theme: Theme
-    var cornerRadius: CGFloat
-    var minHeight: CGFloat
-    let action: () -> Void
-    @ViewBuilder var label: Label
+/// 強弱のバーに付ける「鳴っている拍」の印。
+///
+/// `step` は 1 拍ごとに変わるので、**このビューの中で読む**。画面の body で読むと、
+/// 再生中は拍子画面全体が 1 拍ごとに作り直しになる。
+private struct PlayingBeatMark: View {
+    @Environment(MetronomeStore.self) private var store
+    let index: Int
 
     var body: some View {
-        Button(action: action) {
-            label
-                .foregroundStyle(isSelected ? .white : Ink.secondary)
-                .frame(maxWidth: .infinity, minHeight: minHeight)
-                .background(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(isSelected ? AnyShapeStyle(theme.deep) : AnyShapeStyle(Ink.inertFill))
-                )
-        }
-        .buttonStyle(PressScale())
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        Circle()
+            .fill(.white.opacity(store.step == index ? 0.9 : 0))
+            .frame(width: 6, height: 6)
+            .padding(.bottom, 8)
     }
 }

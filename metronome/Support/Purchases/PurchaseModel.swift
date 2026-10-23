@@ -88,10 +88,12 @@ final class PurchaseModel {
         await withCheckedContinuation { knownWaiters.append($0) }
     }
 
-    /// 買い切り商品を購入する。価格が取れていないときは呼ばない
-    /// (商品が引けていない = 購入もできない)。
+    /// いま購入できるか。価格が取れていない = 商品が引けていないので、押しても買えない
+    var canBuy: Bool { isAvailable && !isPro && !isPurchasing && priceText != nil }
+
+    /// 買い切り商品を購入する。`canBuy` が偽なら何もしない。
     func buy() async {
-        guard isAvailable, !isPurchasing, !isPro, priceText != nil else { return }
+        guard canBuy else { return }
         isPurchasing = true
         defer { isPurchasing = false }
 

@@ -6,7 +6,7 @@ import SwiftUI
 /// つまみを白丸にするため(`Slider` では両方とも差し替えられない)。
 /// そのぶん VoiceOver からは何も見えないので、`accessibilityRepresentation` で
 /// 標準スライダーとして振る舞わせている。
-struct TrackSlider: View {
+struct TrackSlider<Fill: ShapeStyle>: View {
     @Binding var value: Double
     var range: ClosedRange<Double>
     /// VoiceOver の 1 回の上下で動く量
@@ -15,7 +15,7 @@ struct TrackSlider: View {
     var valueText: (Double) -> String
     var height: CGFloat = 12
     var knob: CGFloat = 26
-    var fill: LinearGradient
+    var fill: Fill
 
     /// トラック上の位置。`range` の外に値があっても端で止める
     /// (BPM はスライダーの範囲 40–240 より広い 30–280 を取りうる)。

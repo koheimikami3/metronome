@@ -49,10 +49,7 @@ struct MetronomeScreen: View {
         // 中央揃えで、2 行ぶんの中央 = 見出しと副題の隙間の高さに来てしまう。
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Metronome")
-                    .font(.system(size: 22, weight: .bold))
-                    .kerning(-0.4)
-                    .foregroundStyle(Ink.primary)
+                ScreenTitle(text: "Metronome")
                 // 分割は「8分」と書くより音符の絵のほうが早く読める。
                 // 拍子画面のチップと同じ絵なので、どれを選んでいるかが一目で繋がる。
                 HStack(spacing: 6) {
@@ -78,9 +75,7 @@ struct MetronomeScreen: View {
     // MARK: - テンポ
 
     private var tempoCard: some View {
-        @Bindable var store = store
-
-        return GlassCard(radius: 28, padding: 18) {
+        GlassCard(radius: 28, padding: 18) {
             VStack(spacing: 14) {
                 HStack {
                     stepper("−", delta: -1, label: "Decrease tempo")
@@ -141,21 +136,18 @@ struct MetronomeScreen: View {
     private var presets: some View {
         HStack(spacing: 8) {
             ForEach(Tempo.presets, id: \.self) { value in
-                let isSelected = store.bpm == value
-                Button {
+                SelectableChip(isSelected: store.bpm == value,
+                               theme: theme,
+                               cornerRadius: 13,
+                               minHeight: 38,
+                               unselected: .glass) {
                     store.setBpm(value)
-                    Haptics.soft()
                 } label: {
                     Text("\(value)")
                         .font(.system(size: 14, weight: .medium))
                         .monospacedDigit()
-                        .foregroundStyle(isSelected ? .white : Ink.secondary)
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                        .modifier(ChipBackground(isSelected: isSelected, theme: theme))
                 }
-                .buttonStyle(PressScale())
                 .accessibilityLabel("\(value) BPM")
-                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
             }
         }
     }
@@ -198,21 +190,7 @@ struct MetronomeScreen: View {
     }
 }
 
-// MARK: - 選択状態で地が変わる面
-
-/// 選択中はテーマの濃い色で塗り、非選択時はガラスにする。
-private struct ChipBackground: ViewModifier {
-    let isSelected: Bool
-    let theme: Theme
-
-    func body(content: Content) -> some View {
-        if isSelected {
-            content.background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(theme.deep))
-        } else {
-            content.liquidGlass(cornerRadius: 13, role: .control)
-        }
-    }
-}
+// MARK: - 再生状態で地が変わる面
 
 /// 停止中はテーマのグラデーション、再生中は色の付かない素のガラス。
 ///

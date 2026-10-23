@@ -11,15 +11,19 @@ final class MetronomeStore {
 
     private let engine = MetronomeEngine()
     private let defaults = UserDefaults.standard
-    private var displayLink: DisplayLink?
+    @ObservationIgnored private var displayLink: DisplayLink?
 
     // MARK: - 永続化する設定
 
-    // MARK: 範囲を丸めるプロパティは didSet を使わない
+    // MARK: 設定は didSet ではなく private(set) + セッターにする
     //
-    // @Observable はプロパティを計算プロパティに書き換えるので、**didSet の中で
-    // 自分自身に代入すると didSet が呼び直されて無限再帰する**(素の Swift では
-    // 起きない)。丸めが要るものは private(set) + セッターにしてある。
+    // - @Observable はプロパティを計算プロパティに書き換えるので、**didSet の中で
+    //   自分自身に代入すると didSet が呼び直されて無限再帰する**(素の Swift では
+    //   起きない)。丸めが要るものはセッターで丸めてから入れる。
+    // - 拍子は 1 回の操作で分子・分割・強弱がまとめて変わる。didSet どうしで連鎖させると
+    //   途中の状態までエンジンに届くので、セッターで全部そろえてから
+    //   `settingsChanged()` を 1 回だけ呼ぶ。
+    // - 保存値の読み戻し(`load()`)は直接代入するだけで、反映も保存も起こさない。
 
     private(set) var bpm = 120
 
@@ -27,30 +31,25 @@ final class MetronomeStore {
         let clamped = Tempo.clamped(value)
         guard clamped != bpm else { return }
         bpm = clamped
-        syncEngine()
-        schedulePersist()
+        settingsChanged()
     }
 
-    var numerator = 4 {
-        didSet {
-            guard numerator != oldValue else { return }
-            normalizeAccents()
-            syncEngine()
-            schedulePersist()
-        }
+    private(set) var numerator = 4
+
+    func setNumerator(_ value: Int) {
+        guard value != numerator else { return }
+        updateSignature { numerator = value }
     }
 
-    var denominator = 4 {
-        didSet {
-            guard denominator != oldValue else { return }
+    private(set) var denominator = 4
+
+    func setDenominator(_ value: Int) {
+        guard value != denominator else { return }
+        updateSignature {
+            denominator = value
             // 分子が新しい分母で選べないなら先頭に寄せる
-            if !TimeSignature.numerators(for: denominator).contains(numerator) {
-                numerator = TimeSignature.numerators(for: denominator).first ?? 4
-            }
-            setSubdivisionIndex(0)   // 分割の選択肢ごと変わるので先頭に戻す
-            normalizeAccents()
-            syncEngine()
-            schedulePersist()
+            let choices = TimeSignature.numerators(for: value)
+            if !choices.contains(numerator) { numerator = choices.first ?? 4 }
         }
     }
 
@@ -60,42 +59,25 @@ final class MetronomeStore {
         let clamped = min(max(index, 0), subdivisionOptions.count - 1)
         guard clamped != subdivisionIndex else { return }
         subdivisionIndex = clamped
-        syncEngine()
-        schedulePersist()
+        settingsChanged()
     }
 
-    var accents: [AccentLevel] = [.strong, .weak, .weak, .weak] {
-        didSet {
-            guard accents != oldValue else { return }
-            syncEngine()
-            schedulePersist()
-        }
-    }
+    private(set) var accents: [AccentLevel] = [.strong, .weak, .weak, .weak]
 
     /// 既定は メトロ1。一覧の先頭で、いちばんメトロノームらしい音。
-    var voice: Voice = .mech {
-        didSet {
-            guard voice != oldValue else { return }
-            syncEngine()
-            schedulePersist()
-        }
-    }
+    private(set) var voice: Voice = .mech
 
-    var themeKey: String = Theme.fallback.key {
-        didSet {
-            guard themeKey != oldValue else { return }
-            schedulePersist()
-        }
-    }
+    private(set) var themeKey: String = Theme.fallback.key
 
-    /// スライダーが 0...1 の範囲しか渡さないので丸めは要らない。
-    /// もし範囲外を入れる経路を足すなら、bpm と同じくセッターにすること。
-    var volume: Double = 1.0 {
-        didSet {
-            guard volume != oldValue else { return }
-            engine.setVolume(Float(volume))
-            schedulePersist()
-        }
+    private(set) var volume: Double = 1.0
+
+    /// 音量(0...1)。ミキサーに入れるだけで、予約し直しは要らない
+    func setVolume(_ value: Double) {
+        let clamped = min(max(value, 0), 1)
+        guard clamped != volume else { return }
+        volume = clamped
+        engine.setVolume(Float(volume))
+        schedulePersist()
     }
 
     // MARK: - 再生状態(永続化しない)
@@ -127,11 +109,11 @@ final class MetronomeStore {
     private(set) var currentBeatDuration: TimeInterval = 60.0 / 120.0
 
     /// エンジンから受け取った「これから鳴る拍」。発音時刻を過ぎたものから消化する。
-    private var pendingBeats: [(beat: Int, audibleAt: TimeInterval)] = []
+    @ObservationIgnored private var pendingBeats: [(beat: Int, audibleAt: TimeInterval)] = []
 
     /// START を押した時刻。STOP で練習時間を出し、レビュー依頼の判定に渡す。
     /// 背面で鳴らしていた時間も練習に含めたいので、端末のスリープ中も進む壁時計で測る。
-    private var startedAt: Date?
+    @ObservationIgnored private var startedAt: Date?
 
     // MARK: - 組み立て
 
@@ -146,8 +128,8 @@ final class MetronomeStore {
                 pendingBeats.removeAll { $0.audibleAt < cutoff }
                 pendingBeats.append((beat, audibleAt))
             },
-            onStop: { [weak self] in
-                self?.handleEngineStopped()
+            onRunningChanged: { [weak self] isRunning in
+                self?.handleEngineRunningChanged(isRunning)
             }
         )
         engine.setVolume(Float(volume))
@@ -176,7 +158,7 @@ final class MetronomeStore {
     var tempoTerm: String { Tempo.term(bpm) }
 
     /// 1 拍の長さ(秒)。いまの BPM から素直に出したもの。
-    var beatDuration: TimeInterval { 60.0 / Double(bpm) }
+    private var beatDuration: TimeInterval { 60.0 / Double(bpm) }
 
     var numeratorCaption: String {
         switch denominator {
@@ -198,7 +180,6 @@ final class MetronomeStore {
     /// 画面はこれでレビュー依頼を出すかを決める(`ReviewPrompter`)。
     @discardableResult
     func toggle() -> TimeInterval? {
-        Diagnostics.toggle(isRunning: isRunning)
         guard isRunning else {
             start()
             return nil
@@ -209,34 +190,46 @@ final class MetronomeStore {
     }
 
     private func start() {
-        pendingBeats.removeAll()
-        beatsSinceStart = 0
-        step = -1
-        currentBeatStartedAt = nil
+        beginRunning()
+        engine.start()
+    }
+
+    /// 画面を再生中の状態にする。START と、割り込み明けの自動再開で共通。
+    /// 練習時間はここから測る(割り込みで止まった回はレビュー依頼に数えない)。
+    private func beginRunning() {
+        resetBeatState()
         startedAt = Date()
         isRunning = true
-        engine.start()
         startDisplayLink()
     }
 
     private func stop() {
-        // 通知は受け取らない。エンジンは別キューなので、通知を往復させると
-        // 「停止 → すぐ開始」したときに**開始したあとで停止通知が届く**ことがあり、
-        // 音は鳴っているのに画面が START に戻ってしまう。
-        engine.stop(notify: false)
-        handleEngineStopped()
+        engine.stop()
+        endRunning()
     }
 
-    /// エンジン側が止まったとき(ユーザー操作・割り込み)の後始末
-    private func handleEngineStopped() {
+    /// エンジンが自分で止めた・鳴らし直したとき(割り込み)。
+    /// START / STOP は画面が先に切り替えているので、ここへは来ない。
+    private func handleEngineRunningChanged(_ running: Bool) {
+        guard running != isRunning else { return }
+        if running { beginRunning() } else { endRunning() }
+    }
+
+    /// 画面を停止中の状態にする(ユーザー操作・割り込みで共通)
+    private func endRunning() {
         displayLink?.stop()
         displayLink = nil
-        pendingBeats.removeAll()
+        resetBeatState()
         isRunning = false
+        startedAt = nil
+    }
+
+    /// 拍の消化まわりを「まだ 1 拍も鳴っていない」状態に戻す
+    private func resetBeatState() {
+        pendingBeats.removeAll()
         beatsSinceStart = 0
         step = -1
         currentBeatStartedAt = nil
-        startedAt = nil
     }
 
     func nudgeBpm(_ delta: Int) {
@@ -247,6 +240,7 @@ final class MetronomeStore {
     func cycleAccent(at index: Int) {
         guard accents.indices.contains(index) else { return }
         accents[index] = accents[index].next
+        settingsChanged()
         if accents[index] != .rest {
             engine.preview(voice, level: accents[index] == .strong ? .strong : .weak)
         }
@@ -255,14 +249,14 @@ final class MetronomeStore {
 
     func resetAccents() {
         accents = (0..<beatCount).map { $0 == 0 ? .strong : .weak }
+        settingsChanged()
         Haptics.soft()
     }
 
     /// タップテンポ。直近 2.4 秒より古いタップは捨てて平均間隔を取る。
-    private var taps: [TimeInterval] = []
+    @ObservationIgnored private var taps: [TimeInterval] = []
 
     func tap() {
-        Diagnostics.tapTempo()
         let now = CACurrentMediaTime()
         taps = taps.filter { now - $0 < 2.4 }
         taps.append(now)
@@ -275,7 +269,10 @@ final class MetronomeStore {
     }
 
     func selectVoice(_ newVoice: Voice) {
-        voice = newVoice
+        if newVoice != voice {
+            voice = newVoice
+            settingsChanged()
+        }
         // 鳴っている最中は試聴しない。試聴は予約列と別に**その場で**鳴るので、
         // 拍と拍の間に余分なアクセントが挟まり、強弱の順番が崩れて聞こえる。
         // 新しい音色は次の拍から鳴るので、聴くのに困らない。
@@ -286,7 +283,10 @@ final class MetronomeStore {
     }
 
     func selectTheme(_ key: String) {
-        themeKey = key
+        if key != themeKey {
+            themeKey = key
+            schedulePersist()
+        }
         Haptics.soft()
     }
 
@@ -320,10 +320,30 @@ final class MetronomeStore {
 
     // MARK: - エンジンへの反映
 
+    /// 拍子を変える操作の中身を `change` で受け取り、付いて決まるもの(分割・強弱)を揃える。
+    ///
+    /// 分割は**選べる一覧が変わったら先頭に戻す**。`subdivisionIndex` は一覧の添字なので、
+    /// 一覧が変わると同じ番号でも別の音価になる(3/8 の 3 連符が 6/8 の 16 分にすり替わる)。
+    /// 分母を変えると一覧は必ず変わり、分子でも単純 ↔ 複合をまたぐと変わる。
+    private func updateSignature(_ change: () -> Void) {
+        let oldOptions = subdivisionOptions
+        change()
+        if subdivisionOptions != oldOptions { subdivisionIndex = 0 }
+        normalizeAccents()
+        settingsChanged()
+    }
+
+    /// 拍数の変化に強弱の数を合わせる。足りない分は弱で埋め、はみ出た分は捨てる
     private func normalizeAccents() {
-        var next = accents
+        var next = Array(accents.prefix(beatCount))
         while next.count < beatCount { next.append(.weak) }
-        accents = Array(next.prefix(beatCount))
+        if next != accents { accents = next }
+    }
+
+    /// 設定を変える操作の最後に 1 回だけ呼ぶ。エンジンへの反映と保存の予約
+    private func settingsChanged() {
+        syncEngine()
+        schedulePersist()
     }
 
     private func syncEngine() {
@@ -351,7 +371,7 @@ final class MetronomeStore {
         static let volume = "volume"
     }
 
-    private var persistTask: Task<Void, Never>?
+    @ObservationIgnored private var persistTask: Task<Void, Never>?
 
     /// スライダーのドラッグ中は 1 秒に何十回も値が変わるので、書き込みは間引く。
     private func schedulePersist() {
@@ -374,39 +394,41 @@ final class MetronomeStore {
         defaults.set(volume, forKey: Key.volume)
     }
 
-    /// 保存値の読み戻し。`didSet` を通さずに入れたいので、検証してから直接代入する。
+    /// 保存値の読み戻し。範囲外や今の拍子と合わない値は捨て、検証してから直接代入する
+    /// (エンジンへの反映は init の最後に 1 回だけ行う)。
     private func load() {
         if let stored = defaults.object(forKey: Key.bpm) as? Int {
-            setBpm(stored)
+            bpm = Tempo.clamped(stored)
         }
         if let stored = defaults.object(forKey: Key.denominator) as? Int,
            TimeSignature.denominators.contains(stored) {
             denominator = stored
         }
-        if let stored = defaults.object(forKey: Key.numerator) as? Int,
-           TimeSignature.numerators(for: denominator).contains(stored) {
+        // 分子はいまの分母で選べる値だけ。既定の 4 も選べない分母なら先頭に寄せる
+        let numerators = TimeSignature.numerators(for: denominator)
+        if let stored = defaults.object(forKey: Key.numerator) as? Int, numerators.contains(stored) {
             numerator = stored
+        } else if !numerators.contains(numerator) {
+            numerator = numerators.first ?? 4
         }
         if let stored = defaults.object(forKey: Key.subdivisionIndex) as? Int {
-            setSubdivisionIndex(stored)
+            subdivisionIndex = min(max(stored, 0), subdivisionOptions.count - 1)
         }
-        if let stored = defaults.array(forKey: Key.accents) as? [Int] {
-            let restored = stored.compactMap(AccentLevel.init(rawValue:))
-            // 拍数と食い違っていたら捨てる(拍子だけ先に書き換わった場合など)
-            if restored.count == beatCount { accents = restored }
+        let storedAccents = (defaults.array(forKey: Key.accents) as? [Int])?
+            .compactMap(AccentLevel.init(rawValue:))
+        // 拍数と食い違っていたら捨てる(拍子だけ先に書き換わった場合など)
+        if let storedAccents, storedAccents.count == beatCount {
+            accents = storedAccents
+        } else {
+            normalizeAccents()
         }
         if let stored = defaults.string(forKey: Key.voice), let restored = Voice(rawValue: stored) {
             voice = restored
         }
-        if let stored = defaults.string(forKey: Key.theme), Theme.all.contains(where: { $0.key == stored }) {
-            themeKey = stored
-        } else {
-            themeKey = Theme.fallback.key   // 初回起動の既定は一覧の先頭(トープ)
-        }
+        // 一覧に無いキー(初回起動を含む)は先頭のテーマ(トープ)になる
+        themeKey = Theme.named(defaults.string(forKey: Key.theme) ?? "").key
         if let stored = defaults.object(forKey: Key.volume) as? Double {
-            let clamped = min(max(stored, 0), 1)
-            if clamped != volume { volume = clamped }
+            volume = min(max(stored, 0), 1)
         }
-        normalizeAccents()
     }
 }

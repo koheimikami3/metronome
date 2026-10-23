@@ -13,8 +13,9 @@ import QuartzCore
 nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     /// スケジューラが参照する設定。まとめて差し替える。
+    /// 既定値は仮の値で、鳴らす前に必ず `MetronomeStore` の `update` で上書きされる。
     struct Settings: Sendable, Equatable {
-        var bpm: Double = 112
+        var bpm: Double = 120
         var beatCount: Int = 4
         /// 1 拍あたりの発音数(分割)
         var pulsesPerBeat: Int = 1
@@ -48,6 +49,8 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private let accentPlayers: [AVAudioPlayerNode]
     /// 音色プレビュー・タップテンポ用。予約列に割り込ませたいので分ける。
     private let previewPlayer = AVAudioPlayerNode()
+    /// グラフに繋ぐ・動かし直すときに全部まとめて扱う
+    private var allPlayers: [AVAudioPlayerNode] { clickPlayers + accentPlayers + [previewPlayer] }
 
     private let format: AVAudioFormat
     private var clickBuffers: [String: AVAudioPCMBuffer] = [:]
@@ -74,7 +77,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private var wasRunningBeforeInterruption = false
 
     private var beatHandler: (@MainActor @Sendable (_ beat: Int, _ audibleAt: TimeInterval) -> Void)?
-    private var stopHandler: (@MainActor @Sendable () -> Void)?
+    private var runningHandler: (@MainActor @Sendable (_ isRunning: Bool) -> Void)?
 
     // MARK: - 組み立て
 
@@ -91,7 +94,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         self.accentPlayers = (0..<3).map { _ in AVAudioPlayerNode() }
 
         engine.attach(mixer)
-        for player in clickPlayers + accentPlayers + [previewPlayer] {
+        for player in allPlayers {
             engine.attach(player)
             engine.connect(player, to: mixer, format: format)
         }
@@ -136,7 +139,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             onInterruptionBegan: { [weak self] in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("interruption began (running: \(self.isRunning))")
                     self.wasRunningBeforeInterruption = self.isRunning
                     if self.isRunning { self.stopLocked(notify: true) }
                 }
@@ -144,7 +146,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             onInterruptionEnded: { [weak self] shouldResume in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("interruption ended (shouldResume: \(shouldResume))")
                     self.configureSession()
                     // 鳴らしていなくても動かし直す。止まったままだと、
                     // 次に鳴らすときに冷えた状態から起こすことになる。
@@ -152,14 +153,16 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                     guard shouldResume, self.wasRunningBeforeInterruption else { return }
                     self.wasRunningBeforeInterruption = false
                     self.startLocked()
+                    // 割り込みの頭で UI には停止を伝えてあるので、鳴らし直したことも伝える。
+                    // 伝えないと音は鳴っているのに画面が START のままになる。
+                    self.notifyRunning(true)
                 }
             },
             onConfigurationChanged: { [weak self] in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("configuration changed (running: \(self.isRunning), engine: \(self.engine.isRunning))")
                     // 出力先が変わるとエンジンの接続もレイテンシも作り直しになる。
-                    // 鳴っていたなら、張り直して同じ位相から鳴らし直す。
+                    // 鳴っていたなら、張り直して小節の頭から鳴らし直す。
                     let resume = self.isRunning
                     if resume { self.stopLocked(notify: false) }
                     self.configureSession()
@@ -173,7 +176,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             onBecameActive: { [weak self] in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("became active (running: \(self.isRunning), engine: \(self.engine.isRunning))")
                     self.configureSession()
                     self.ensureEngineRunning()
                 }
@@ -181,7 +183,6 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             onEnteredBackground: { [weak self] in
                 guard let self else { return }
                 queue.async {
-                    Diagnostics.audio("entered background (running: \(self.isRunning), engine: \(self.engine.isRunning))")
                     // 鳴っている最中は触らない(バックグラウンド再生を続ける)。
                     // 止まっているなら手を引く。空回しのまま背面に居座ると
                     // アプリが休止できず、電池を使い続ける。
@@ -190,7 +191,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                     // 止めた時点で、休止を妨げているのはそちらだけ。
                     // setActive(false) → setActive(true) の往復を挟むと、
                     // 次に背面へ入ったときに音が止まる症状が実機で残っていたので、
-                    // 往復そのものをやめた(効果はまだ実機で確認中)。
+                    // 往復そのものをやめた。
                     self.engine.stop()
                 }
             }
@@ -199,11 +200,13 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     // MARK: - 公開 API(どのスレッドから呼んでもよい)
 
+    /// `onRunningChanged` はエンジンが自分で止めた・鳴らし直したとき(割り込み)だけ呼ぶ。
+    /// `start()` / `stop()` では呼ばない(下記)。
     func setHandlers(onBeat: @escaping @MainActor @Sendable (Int, TimeInterval) -> Void,
-                     onStop: @escaping @MainActor @Sendable () -> Void) {
+                     onRunningChanged: @escaping @MainActor @Sendable (Bool) -> Void) {
         queue.async {
             self.beatHandler = onBeat
-            self.stopHandler = onStop
+            self.runningHandler = onRunningChanged
         }
     }
 
@@ -224,14 +227,23 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         }
     }
 
+    /// ユーザーが割り込み中に START / STOP を押したら、割り込み明けの自動再開はしない
+    /// (押した結果を上書きしない)。
     func start() {
-        queue.async { self.startLocked() }
+        queue.async {
+            self.wasRunningBeforeInterruption = false
+            self.startLocked()
+        }
     }
 
-    /// `notify` は「止まったことを UI に伝えるか」。ユーザー操作で止めたときは
-    /// 呼び出し側がすでに知っているので false にする(通知の往復で順序が入れ替わる)。
-    func stop(notify: Bool = true) {
-        queue.async { self.stopLocked(notify: notify) }
+    /// 止まったことは UI に伝えない。呼び出し側はすでに知っているうえ、エンジンは別キュー
+    /// なので、通知を往復させると「停止 → すぐ開始」したときに**開始したあとで停止通知が
+    /// 届く**ことがあり、音は鳴っているのに画面が START に戻ってしまう。
+    func stop() {
+        queue.async {
+            self.wasRunningBeforeInterruption = false
+            self.stopLocked(notify: false)
+        }
     }
 
     /// 単発再生(音色プレビュー・タップテンポ・強弱の編集)。
@@ -271,7 +283,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         }
 
         guard restarted else {
-            for player in clickPlayers + accentPlayers + [previewPlayer] where !player.isPlaying {
+            for player in allPlayers where !player.isPlaying {
                 player.play()
             }
             return
@@ -282,7 +294,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         // play() を省くと前の走行の対応が残り、`playerTime(forNodeTime:)` が
         // ずれた時刻を返す。予約が遥か先へ飛んで、**拍だけ進んで無音**になる
         // (起動 → 背面 → 前面 → START で実際に起きていた)。
-        for player in clickPlayers + accentPlayers + [previewPlayer] {
+        for player in allPlayers {
             player.stop()
             player.play()
         }
@@ -319,23 +331,18 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             player.play()
         }
 
-        if notify, let stopHandler {
-            DispatchQueue.main.async { MainActor.assumeIsolated { stopHandler() } }
-        }
+        if notify { notifyRunning(false) }
+    }
+
+    /// エンジンが自分で再生状態を変えたことを UI に伝える
+    private func notifyRunning(_ running: Bool) {
+        guard let runningHandler else { return }
+        DispatchQueue.main.async { MainActor.assumeIsolated { runningHandler(running) } }
     }
 
     /// 25 ms ごとに「lookahead 秒以内に鳴る音」を予約する。
-    /// 心拍ログの間引き。`tickInterval` 0.025 秒 × 80 = 2 秒に 1 行。
-    private var heartbeat = 0
-
     private func tick() {
         guard isRunning, let renderTime = clickPlayers[0].lastRenderTime else { return }
-
-        heartbeat += 1
-        if heartbeat % 80 == 0 {
-            // 背面でレンダリングが止まっていれば sample が進まない
-            Diagnostics.audio("running (engine: \(engine.isRunning), sample: \(renderTime.sampleTime))")
-        }
 
         let sampleRate = format.sampleRate
         if !hasAnchor {

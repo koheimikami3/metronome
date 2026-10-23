@@ -53,15 +53,12 @@ struct RootView: View {
         TabView(selection: $tab) {
             screen(.metronome) { MetronomeScreen() }
                 .tabItem { Label("Metronome", systemImage: "metronome") }
-                .tag(Tab.metronome)
 
             screen(.signature) { SignatureScreen() }
                 .tabItem { Label("Time Signature", systemImage: "music.note.list") }
-                .tag(Tab.signature)
 
             screen(.settings) { SettingsScreen() }
                 .tabItem { Label("Settings", systemImage: "gearshape") }
-                .tag(Tab.settings)
         }
         .environment(store)
         .environment(purchases)
@@ -121,6 +118,8 @@ struct RootView: View {
                 }
             }
             .background { ThemedBackground(theme: store.theme) }
+            // バナーの付け替え先(`owner == tab`)とタブの識別子を同じ値から取る
+            .tag(owner)
     }
 
     /// バナーを載せるガラスの帯。

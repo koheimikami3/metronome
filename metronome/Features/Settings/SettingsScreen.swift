@@ -23,38 +23,24 @@ struct SettingsScreen: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                Text("Settings")
-                    .font(.system(size: 22, weight: .bold))
-                    .kerning(-0.4)
-                    .foregroundStyle(Ink.primary)
+                ScreenTitle(text: "Settings")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 10)
 
                 // 課金を扱えない(SDK キーが空)ときは出さない。押しても何も起きない
                 // カードを置くより、無いほうがよい
                 if purchases.isAvailable {
-                    SectionLabel(text: "Pro").padding(.top, 20)
-                    ProCard(theme: theme).padding(.top, 8)
+                    section("Pro") { ProCard(theme: theme) }
                 }
-
-                SectionLabel(text: "Click Sound").padding(.top, 20)
-                voiceCard.padding(.top, 8)
-
-                SectionLabel(text: "Theme").padding(.top, 20)
-                themeCard.padding(.top, 8)
-
+                section("Click Sound") { voiceCard }
+                section("Theme") { themeCard }
                 if ReviewLink.writeReviewURL != nil {
-                    SectionLabel(text: "Support").padding(.top, 20)
-                    reviewCard.padding(.top, 8)
+                    section("Support") { reviewCard }
                 }
-
                 if isJapaneseUI {
-                    SectionLabel(text: "More Apps").padding(.top, 20)
-                    OtherAppsCard(theme: theme).padding(.top, 8)
+                    section("More Apps") { OtherAppsCard(theme: theme) }
                 }
-
-                SectionLabel(text: "About").padding(.top, 20)
-                infoCard.padding(.top, 8)
+                section("About") { infoCard }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
@@ -64,6 +50,14 @@ struct SettingsScreen: View {
         }
     }
 
+    /// 小見出し + カード。外側の VStack(spacing: 0)に展開されるので、間隔はここで付ける
+    @ViewBuilder
+    private func section<Content: View>(_ title: LocalizedStringKey,
+                                         @ViewBuilder content: () -> Content) -> some View {
+        SectionLabel(text: title).padding(.top, 20)
+        content().padding(.top, 8)
+    }
+
     // MARK: - クリック音(選ぶとその場で鳴る)+ 音量
 
     /// 音量のスライダーは**音色と同じカードの下段**に入れている。
@@ -71,9 +65,7 @@ struct SettingsScreen: View {
     /// あるほうが読み筋に合う(別カードにしてテーマの下に置くと、
     /// テーマの設定のように見える)。
     private var voiceCard: some View {
-        @Bindable var store = store
-
-        return GlassCard(padding: 12) {
+        GlassCard(padding: 12) {
             // 余白は VStack の spacing ではなく各要素に付ける。音量の行だけ
             // 上下を広く取りたいので、一律の spacing だと合わない。
             VStack(spacing: 0) {
@@ -126,15 +118,14 @@ struct SettingsScreen: View {
                     // 行の左右 8 + カードの内側余白 12 = 20 をその逃げに充てる。
                     // ラベル側も同じだけ要るので HStack の間隔を 18 取っている。
                     TrackSlider(
-                        value: $store.volume,
+                        value: Binding(get: { store.volume }, set: { store.setVolume($0) }),
                         range: 0...1,
                         step: 0.05,
                         label: "Volume",
                         valueText: { "\(Int(($0 * 100).rounded()))%" },
                         height: 6,
                         knob: 24,
-                        fill: LinearGradient(colors: [theme.accent, theme.accent],
-                                             startPoint: .leading, endPoint: .trailing)
+                        fill: theme.accent
                     )
                 }
                 .padding(.horizontal, 8)
