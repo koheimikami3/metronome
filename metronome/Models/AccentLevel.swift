@@ -7,8 +7,15 @@ enum AccentLevel: Int, CaseIterable, Sendable {
     case weak = 1
     case strong = 2
 
-    /// タップ 1 回ぶんの巡回先
-    var next: AccentLevel { AccentLevel(rawValue: (rawValue + 1) % 3) ?? .rest }
+    /// タップ 1 回ぶんの巡回先。rawValue の並び(休 < 弱 < 強)とは逆向きに回るので、
+    /// 番号の +1 では書かない(強の次が休になってしまう)
+    var next: AccentLevel {
+        switch self {
+        case .strong: .weak
+        case .weak: .rest
+        case .rest: .strong
+        }
+    }
 
     var label: String {
         switch self {
