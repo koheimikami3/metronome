@@ -21,14 +21,22 @@ struct PendulumView: View {
             // 自然に縮み、下のボタンを押し出さない。下限は枠の下限と揃える
             // (ここだけ大きいと枠からはみ出してヘッダーに重なる)。
             let length = max(60, geo.size.height)
+            // store から読むものは**ここで 1 回だけ**読んで TimelineView に値で渡す。
+            // 中で読むと毎フレーム読み直しになる(どれも拍ごとにしか変わらない)。
+            let theme = store.theme
+            let weightOffset = weightOffset(length)
             Group {
                 if store.isRunning, let beatStartedAt = store.currentBeatStartedAt {
+                    let beatDuration = store.currentBeatDuration
+                    let beatsSinceStart = store.beatsSinceStart
                     // 毎フレーム呼び直されるので、角度は現在時刻から素直に計算できる
                     TimelineView(.animation) { _ in
-                        arm(angle: angle(startedAt: beatStartedAt), length: length)
+                        arm(angle: angle(startedAt: beatStartedAt, duration: beatDuration,
+                                         beatsSinceStart: beatsSinceStart),
+                            length: length, weightOffset: weightOffset, theme: theme, isRunning: true)
                     }
                 } else {
-                    arm(angle: 0, length: length)
+                    arm(angle: 0, length: length, weightOffset: weightOffset, theme: theme, isRunning: false)
                         .animation(.easeOut(duration: 0.45), value: store.isRunning)
                 }
             }
@@ -45,7 +53,8 @@ struct PendulumView: View {
         .accessibilityHidden(true)
     }
 
-    private func arm(angle: Double, length: CGFloat) -> some View {
+    private func arm(angle: Double, length: CGFloat, weightOffset: CGFloat,
+                     theme: Theme, isRunning: Bool) -> some View {
         Capsule()
             .fill(Ink.pendulum)
             .frame(width: 10, height: length)
@@ -53,10 +62,10 @@ struct PendulumView: View {
             // 旗に見えるうえ、アイコンの「棒だけ」の見た目からも離れる。
             .overlay(alignment: .bottom) {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(store.theme.deep)
+                    .fill(theme.deep)
                     .frame(width: 44, height: 13)
-                    .shadow(color: store.isRunning ? store.theme.bloom1 : .clear, radius: 6)
-                    .offset(y: -weightOffset(length))
+                    .shadow(color: isRunning ? theme.bloom1 : .clear, radius: 6)
+                    .offset(y: -weightOffset)
             }
             .rotationEffect(.degrees(angle), anchor: .bottom)
     }
@@ -70,18 +79,18 @@ struct PendulumView: View {
     }
 
     /// 1 拍で端から端まで渡る。
-    private func angle(startedAt: TimeInterval) -> Double {
+    private func angle(startedAt: TimeInterval, duration: TimeInterval, beatsSinceStart: Int) -> Double {
         // 拍の時刻は CACurrentMediaTime 基準で届くので、同じ時計で測る
         let elapsed = max(0, CACurrentMediaTime() - startedAt)
         // 拍長は**その拍が始まった時点の値**。いまの BPM を使うと、
         // 再生中にテンポを変えた瞬間に進み具合が飛んで棒がカクつく。
-        let progress = min(elapsed / max(store.currentBeatDuration, 0.001), 1)
+        let progress = min(elapsed / max(duration, 0.001), 1)
 
         // 向きは拍ごとに入れ替える。小節内の拍番号ではなく**通し番号**で数えるのは、
         // 3 拍子のように奇数だと小節をまたぐたび向きが揃ってしまうため。
-        let target = store.beatsSinceStart % 2 == 1 ? Self.maxAngle : -Self.maxAngle
+        let target = beatsSinceStart % 2 == 1 ? Self.maxAngle : -Self.maxAngle
         // 始めた直後の 1 振りだけは中央から。いきなり端へ飛ぶと不自然に見える。
-        let from = store.beatsSinceStart <= 1 ? 0 : -target
+        let from = beatsSinceStart <= 1 ? 0 : -target
 
         // 実際の振り子と同じく、端でいちばん遅くなる。
         // デザインの timing-curve(0.36, 0, 0.64, 1) にも近い。
