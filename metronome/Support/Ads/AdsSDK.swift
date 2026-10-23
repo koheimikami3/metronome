@@ -16,11 +16,7 @@ final class AdsSDK {
 
     /// ATT → SDK の初期化、の順に進める。済んでいれば即座に戻る。
     func ensureStarted() async {
-        if let startTask {
-            await startTask.value
-            return
-        }
-        let task = Task { await start() }
+        let task = startTask ?? Task { await start() }
         startTask = task
         await task.value
     }

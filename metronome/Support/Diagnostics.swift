@@ -9,28 +9,30 @@ import os
 ///
 /// `os` の import をこのファイルに閉じたいので、呼び出し側には関数だけを見せる。
 nonisolated enum Diagnostics {
-    private static let audioLog = Logger(subsystem: "com.kohei.mikami.metronome", category: "audio")
+    private static let subsystem = "com.kohei.mikami.metronome"
+
+    private static let audioLog = Logger(subsystem: subsystem, category: "audio")
 
     /// オーディオセッションの失敗
     static func audio(_ message: String) {
         audioLog.notice("\(message, privacy: .public)")
     }
 
-    private static let adsLog = Logger(subsystem: "com.kohei.mikami.metronome", category: "ads")
+    private static let adsLog = Logger(subsystem: subsystem, category: "ads")
 
     /// 広告と ATT
     static func ads(_ message: String) {
         adsLog.notice("\(message, privacy: .public)")
     }
 
-    private static let purchasesLog = Logger(subsystem: "com.kohei.mikami.metronome", category: "purchases")
+    private static let purchasesLog = Logger(subsystem: subsystem, category: "purchases")
 
     /// 課金(購入状態の変化と失敗)
     static func purchases(_ message: String) {
         purchasesLog.notice("\(message, privacy: .public)")
     }
 
-    private static let reviewLog = Logger(subsystem: "com.kohei.mikami.metronome", category: "review")
+    private static let reviewLog = Logger(subsystem: subsystem, category: "review")
 
     /// 自動のレビュー依頼(出す・見送るの判定理由)
     static func review(_ message: String) {
