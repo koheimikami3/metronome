@@ -47,10 +47,26 @@ struct SectionLabel: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(Ink.muted)
+            .captionStyle()
             .padding(.leading, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+extension View {
+    /// 小見出しの文字。カードの上の `SectionLabel` と、カードの中の見出し(拍子画面)で共通
+    func captionStyle() -> some View {
+        font(.system(size: 13, weight: .medium))
+            .foregroundStyle(Ink.muted)
+    }
+
+    /// 行の右端に置く、押せるカプセル(「入手」「購入」)。形を揃えるために 1 か所で決める
+    func capsuleActionStyle(theme: Theme) -> some View {
+        font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(theme.deep)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 7)
+            .background(Capsule().fill(Ink.inertFill))
     }
 }
 

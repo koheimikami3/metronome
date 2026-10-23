@@ -51,8 +51,7 @@ struct SignatureScreen: View {
                 // 「文 → ボタン → 文」の挟み込みになって読みにくい。
                 HStack(alignment: .firstTextBaseline) {
                     Text(store.numeratorCaption)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.muted)
+                        .captionStyle()
                     Spacer(minLength: 8)
                     if let caption = store.compoundCaption {
                         Text(caption)
@@ -63,12 +62,8 @@ struct SignatureScreen: View {
 
                 HStack(spacing: 8) {
                     ForEach(TimeSignature.numerators(for: store.denominator), id: \.self) { value in
-                        SelectableChip(isSelected: store.numerator == value,
-                                       theme: theme,
-                                       cornerRadius: 15,
-                                       minHeight: 46) {
+                        SelectableChip(isSelected: store.numerator == value, theme: theme) {
                             store.numerator = value
-                            Haptics.soft()
                         } label: {
                             Text("\(value)")
                                 .font(.system(size: 17, weight: .semibold))
@@ -86,17 +81,12 @@ struct SignatureScreen: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Beat unit")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Ink.muted)
+                    .captionStyle()
 
                 HStack(spacing: 8) {
                     ForEach(TimeSignature.denominators, id: \.self) { value in
-                        SelectableChip(isSelected: store.denominator == value,
-                                       theme: theme,
-                                       cornerRadius: 15,
-                                       minHeight: 46) {
+                        SelectableChip(isSelected: store.denominator == value, theme: theme) {
                             store.denominator = value
-                            Haptics.soft()
                         } label: {
                             Text(TimeSignature.label(denominator: value))
                                 .font(.system(size: 15, weight: .medium))
@@ -114,8 +104,7 @@ struct SignatureScreen: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Accents")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.muted)
+                        .captionStyle()
                     Spacer()
                     Button("Reset") { store.resetAccents() }
                         .font(.system(size: 12, weight: .semibold))
@@ -172,8 +161,7 @@ struct SignatureScreen: View {
         GlassCard(padding: 12) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Subdivision")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Ink.muted)
+                    .captionStyle()
                     .padding(.leading, 6)
 
                 HStack(spacing: 8) {
@@ -184,7 +172,6 @@ struct SignatureScreen: View {
                                        cornerRadius: 16,
                                        minHeight: 58) {
                             store.setSubdivisionIndex(index)
-                            Haptics.soft()
                         } label: {
                             // 音符は文字ではないので foregroundStyle が効かない。色は直に渡す
                             NoteGlyph(subdivision: subdivision, color: isSelected ? .white : Ink.secondary)
@@ -210,29 +197,5 @@ private struct PlayingBeatMark: View {
             .fill(.white.opacity(store.step == index ? 0.9 : 0))
             .frame(width: 6, height: 6)
             .padding(.bottom, 8)
-    }
-}
-
-/// 拍子画面で繰り返し出てくる「選べる四角いチップ」。
-private struct SelectableChip<Label: View>: View {
-    let isSelected: Bool
-    let theme: Theme
-    var cornerRadius: CGFloat
-    var minHeight: CGFloat
-    let action: () -> Void
-    @ViewBuilder var label: Label
-
-    var body: some View {
-        Button(action: action) {
-            label
-                .foregroundStyle(isSelected ? .white : Ink.secondary)
-                .frame(maxWidth: .infinity, minHeight: minHeight)
-                .background(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(isSelected ? AnyShapeStyle(theme.deep) : AnyShapeStyle(Ink.inertFill))
-                )
-        }
-        .buttonStyle(PressScale())
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }

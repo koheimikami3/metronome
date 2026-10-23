@@ -30,28 +30,17 @@ struct SettingsScreen: View {
                 // 課金を扱えない(SDK キーが空)ときは出さない。押しても何も起きない
                 // カードを置くより、無いほうがよい
                 if purchases.isAvailable {
-                    SectionLabel(text: "Pro").padding(.top, 20)
-                    ProCard(theme: theme).padding(.top, 8)
+                    section("Pro") { ProCard(theme: theme) }
                 }
-
-                SectionLabel(text: "Click Sound").padding(.top, 20)
-                voiceCard.padding(.top, 8)
-
-                SectionLabel(text: "Theme").padding(.top, 20)
-                themeCard.padding(.top, 8)
-
+                section("Click Sound") { voiceCard }
+                section("Theme") { themeCard }
                 if ReviewLink.writeReviewURL != nil {
-                    SectionLabel(text: "Support").padding(.top, 20)
-                    reviewCard.padding(.top, 8)
+                    section("Support") { reviewCard }
                 }
-
                 if isJapaneseUI {
-                    SectionLabel(text: "More Apps").padding(.top, 20)
-                    OtherAppsCard(theme: theme).padding(.top, 8)
+                    section("More Apps") { OtherAppsCard(theme: theme) }
                 }
-
-                SectionLabel(text: "About").padding(.top, 20)
-                infoCard.padding(.top, 8)
+                section("About") { infoCard }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
@@ -59,6 +48,14 @@ struct SettingsScreen: View {
         .sheet(isPresented: $isShowingLicenses) {
             LicenseListView()
         }
+    }
+
+    /// 小見出し + カード。外側の VStack(spacing: 0)に展開されるので、間隔はここで付ける
+    @ViewBuilder
+    private func section<Content: View>(_ title: LocalizedStringKey,
+                                         @ViewBuilder content: () -> Content) -> some View {
+        SectionLabel(text: title).padding(.top, 20)
+        content().padding(.top, 8)
     }
 
     // MARK: - クリック音(選ぶとその場で鳴る)+ 音量
@@ -130,8 +127,7 @@ struct SettingsScreen: View {
                         valueText: { "\(Int(($0 * 100).rounded()))%" },
                         height: 6,
                         knob: 24,
-                        fill: LinearGradient(colors: [theme.accent, theme.accent],
-                                             startPoint: .leading, endPoint: .trailing)
+                        fill: theme.accent
                     )
                 }
                 .padding(.horizontal, 8)

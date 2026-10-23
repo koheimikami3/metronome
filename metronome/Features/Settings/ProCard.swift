@@ -47,7 +47,7 @@ struct ProCard: View {
 
             Spacer(minLength: 8)
 
-            // 「入手」(`OtherAppsCard`)と同じカプセルにして、押せるものの形を揃える
+            // 「入手」(`OtherAppsCard`)と同じカプセル(`capsuleActionStyle`)
             Button {
                 Haptics.soft()
                 Task { await purchases.buy() }
@@ -61,24 +61,16 @@ struct ProCard: View {
                         Text(purchases.isPro ? "Purchased" : "Buy")
                     }
                 }
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(theme.deep)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(Ink.inertFill))
+                .capsuleActionStyle(theme: theme)
             }
             .buttonStyle(.plain)
-            .disabled(!canBuy)
-            .opacity(canBuy || purchases.isPro || purchases.isPurchasing ? 1 : 0.5)
+            .disabled(!purchases.canBuy)
+            // 薄くするのは「価格が取れず買えない」ときだけ。購入済み・購入中は押せないが薄くしない
+            .opacity(purchases.priceText == nil && !purchases.isPro && !purchases.isPurchasing ? 0.5 : 1)
             .accessibilityLabel(purchases.isPro ? "Purchased" : "Buy Remove Ads")
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 11)
-    }
-
-    /// 価格が取れていない = 商品が引けていないので、押しても買えない
-    private var canBuy: Bool {
-        !purchases.isPro && !purchases.isPurchasing && purchases.priceText != nil
     }
 
     private var statusText: String {
