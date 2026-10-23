@@ -65,9 +65,7 @@ struct SettingsScreen: View {
     /// あるほうが読み筋に合う(別カードにしてテーマの下に置くと、
     /// テーマの設定のように見える)。
     private var voiceCard: some View {
-        @Bindable var store = store
-
-        return GlassCard(padding: 12) {
+        GlassCard(padding: 12) {
             // 余白は VStack の spacing ではなく各要素に付ける。音量の行だけ
             // 上下を広く取りたいので、一律の spacing だと合わない。
             VStack(spacing: 0) {
@@ -120,7 +118,7 @@ struct SettingsScreen: View {
                     // 行の左右 8 + カードの内側余白 12 = 20 をその逃げに充てる。
                     // ラベル側も同じだけ要るので HStack の間隔を 18 取っている。
                     TrackSlider(
-                        value: $store.volume,
+                        value: Binding(get: { store.volume }, set: { store.setVolume($0) }),
                         range: 0...1,
                         step: 0.05,
                         label: "Volume",

@@ -13,6 +13,7 @@ import QuartzCore
 nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     /// スケジューラが参照する設定。まとめて差し替える。
+    /// 既定値は仮の値で、鳴らす前に必ず `MetronomeStore` の `update` で上書きされる。
     struct Settings: Sendable, Equatable {
         var bpm: Double = 120
         var beatCount: Int = 4
@@ -76,8 +77,7 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
     private var wasRunningBeforeInterruption = false
 
     private var beatHandler: (@MainActor @Sendable (_ beat: Int, _ audibleAt: TimeInterval) -> Void)?
-    private var stopHandler: (@MainActor @Sendable () -> Void)?
-    private var resumeHandler: (@MainActor @Sendable () -> Void)?
+    private var runningHandler: (@MainActor @Sendable (_ isRunning: Bool) -> Void)?
 
     // MARK: - 組み立て
 
@@ -155,16 +155,14 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
                     self.startLocked()
                     // 割り込みの頭で UI には停止を伝えてあるので、鳴らし直したことも伝える。
                     // 伝えないと音は鳴っているのに画面が START のままになる。
-                    if let resumeHandler = self.resumeHandler {
-                        DispatchQueue.main.async { MainActor.assumeIsolated { resumeHandler() } }
-                    }
+                    self.notifyRunning(true)
                 }
             },
             onConfigurationChanged: { [weak self] in
                 guard let self else { return }
                 queue.async {
                     // 出力先が変わるとエンジンの接続もレイテンシも作り直しになる。
-                    // 鳴っていたなら、張り直して同じ位相から鳴らし直す。
+                    // 鳴っていたなら、張り直して小節の頭から鳴らし直す。
                     let resume = self.isRunning
                     if resume { self.stopLocked(notify: false) }
                     self.configureSession()
@@ -202,14 +200,13 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
 
     // MARK: - 公開 API(どのスレッドから呼んでもよい)
 
-    /// `onStop` / `onResume` はエンジンが自分で止めた・鳴らし直したとき(割り込み)だけ呼ぶ。
+    /// `onRunningChanged` はエンジンが自分で止めた・鳴らし直したとき(割り込み)だけ呼ぶ。
+    /// `start()` / `stop()` では呼ばない(下記)。
     func setHandlers(onBeat: @escaping @MainActor @Sendable (Int, TimeInterval) -> Void,
-                     onStop: @escaping @MainActor @Sendable () -> Void,
-                     onResume: @escaping @MainActor @Sendable () -> Void) {
+                     onRunningChanged: @escaping @MainActor @Sendable (Bool) -> Void) {
         queue.async {
             self.beatHandler = onBeat
-            self.stopHandler = onStop
-            self.resumeHandler = onResume
+            self.runningHandler = onRunningChanged
         }
     }
 
@@ -239,12 +236,13 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
         }
     }
 
-    /// `notify` は「止まったことを UI に伝えるか」。ユーザー操作で止めたときは
-    /// 呼び出し側がすでに知っているので false にする(通知の往復で順序が入れ替わる)。
-    func stop(notify: Bool = true) {
+    /// 止まったことは UI に伝えない。呼び出し側はすでに知っているうえ、エンジンは別キュー
+    /// なので、通知を往復させると「停止 → すぐ開始」したときに**開始したあとで停止通知が
+    /// 届く**ことがあり、音は鳴っているのに画面が START に戻ってしまう。
+    func stop() {
         queue.async {
             self.wasRunningBeforeInterruption = false
-            self.stopLocked(notify: notify)
+            self.stopLocked(notify: false)
         }
     }
 
@@ -333,9 +331,13 @@ nonisolated final class MetronomeEngine: @unchecked Sendable {
             player.play()
         }
 
-        if notify, let stopHandler {
-            DispatchQueue.main.async { MainActor.assumeIsolated { stopHandler() } }
-        }
+        if notify { notifyRunning(false) }
+    }
+
+    /// エンジンが自分で再生状態を変えたことを UI に伝える
+    private func notifyRunning(_ running: Bool) {
+        guard let runningHandler else { return }
+        DispatchQueue.main.async { MainActor.assumeIsolated { runningHandler(running) } }
     }
 
     /// 25 ms ごとに「lookahead 秒以内に鳴る音」を予約する。

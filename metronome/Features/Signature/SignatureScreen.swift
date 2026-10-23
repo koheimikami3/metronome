@@ -63,7 +63,7 @@ struct SignatureScreen: View {
                 HStack(spacing: 8) {
                     ForEach(TimeSignature.numerators(for: store.denominator), id: \.self) { value in
                         SelectableChip(isSelected: store.numerator == value, theme: theme) {
-                            store.numerator = value
+                            store.setNumerator(value)
                         } label: {
                             Text("\(value)")
                                 .font(.system(size: 17, weight: .semibold))
@@ -86,7 +86,7 @@ struct SignatureScreen: View {
                 HStack(spacing: 8) {
                     ForEach(TimeSignature.denominators, id: \.self) { value in
                         SelectableChip(isSelected: store.denominator == value, theme: theme) {
-                            store.denominator = value
+                            store.setDenominator(value)
                         } label: {
                             Text(TimeSignature.label(denominator: value))
                                 .font(.system(size: 15, weight: .medium))
